@@ -1,0 +1,1 @@
+# jewellery-shop-Pariva
