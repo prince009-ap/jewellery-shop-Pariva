@@ -1,0 +1,1224 @@
+import Order from "../models/Order.js";
+import Cart from "../models/Cart.js";
+import { generateInvoice } from "../utils/generateInvoice.js";
+import { sendMail } from "../utils/sendMail.js";
+import path from "path";
+import fs from "fs";
+import razorpay from "../utils/razorpay.js";
+import Address from "../models/Address.js";
+import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Get invoice download
+export const getInvoiceDownload = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required"
+      });
+    }
+
+    console.log("📄 Invoice download request for order:", orderId);
+
+    // Find order belonging to user
+    const order = await Order.findOne({ 
+      _id: orderId, 
+      user: req.user.id 
+    });
+
+    if (!order) {
+      console.log("❌ Order not found or unauthorized");
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Check if invoice exists
+    if (!order.invoice.generated || !order.invoice.path) {
+      console.log("❌ Invoice not generated for order:", orderId);
+      
+      // Generate invoice on-demand
+      try {
+        console.log("📄 Generating invoice on-demand...");
+        const invoiceBuffer = await generateInvoice(order);
+        
+        // Create invoice filename
+        const invoiceFilename = `invoice_${order._id}_${Date.now()}.pdf`;
+        const invoicePath = path.join(__dirname, "../uploads/invoices", invoiceFilename);
+        
+        // Ensure invoices directory exists
+        const invoicesDir = path.dirname(invoicePath);
+        if (!fs.existsSync(invoicesDir)) {
+          fs.mkdirSync(invoicesDir, { recursive: true });
+        }
+        
+        // Save invoice file
+        fs.writeFileSync(invoicePath, invoiceBuffer);
+        
+        // Update order with invoice info
+        order.invoice.generated = true;
+        order.invoice.filename = invoiceFilename;
+        order.invoice.path = invoicePath;
+        order.invoice.generatedAt = new Date();
+        await order.save();
+        
+        console.log("📄 On-demand invoice generated:", invoicePath);
+      } catch (invoiceError) {
+        console.error("❌ On-demand invoice generation failed:", invoiceError);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to generate invoice"
+        });
+      }
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(order.invoice.path)) {
+      console.log("❌ Invoice file not found:", order.invoice.path);
+      return res.status(404).json({
+        success: false,
+        message: "Invoice file not found"
+      });
+    }
+
+    console.log("📄 Serving invoice file:", order.invoice.path);
+    
+    // Read the file first to verify it's a valid PDF
+    const fileBuffer = fs.readFileSync(order.invoice.path);
+    console.log(`📄 File size: ${fileBuffer.length} bytes`);
+    
+    // Check if it's a valid PDF by checking header
+    const pdfHeader = fileBuffer.slice(0, 4).toString();
+    console.log(`📄 File header: "${pdfHeader}"`);
+    
+    if (pdfHeader !== '%PDF') {
+      console.error("❌ Invalid PDF file header:", pdfHeader);
+      
+      // Try to regenerate the invoice
+      console.log("🔄 Regenerating invoice...");
+      try {
+        const newPdfBuffer = await generateInvoice(order);
+        console.log(`📄 New PDF generated: ${newPdfBuffer.length} bytes`);
+        
+        // Update order with new invoice
+        const invoiceFilename = `invoice_${order._id}_${Date.now()}.pdf`;
+        const invoicePath = path.join(__dirname, "../uploads/invoices", invoiceFilename);
+        
+        // Ensure directory exists
+        const invoicesDir = path.dirname(invoicePath);
+        if (!fs.existsSync(invoicesDir)) {
+          fs.mkdirSync(invoicesDir, { recursive: true });
+        }
+        
+        // Save new invoice
+        fs.writeFileSync(invoicePath, newPdfBuffer);
+        
+        // Update order
+        order.invoice.generated = true;
+        order.invoice.filename = invoiceFilename;
+        order.invoice.path = invoicePath;
+        order.invoice.generatedAt = new Date();
+        await order.save();
+        
+        // Set headers and send new PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${invoiceFilename}"`);
+        res.setHeader('Content-Length', newPdfBuffer.length);
+        res.send(newPdfBuffer);
+        return;
+        
+      } catch (regenError) {
+        console.error("❌ Failed to regenerate invoice:", regenError);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to generate valid PDF invoice"
+        });
+      }
+    }
+    
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${order.invoice.filename}"`);
+    res.setHeader('Content-Length', fileBuffer.length);
+    
+    // Send the file buffer directly
+    res.send(fileBuffer);
+
+  } catch (error) {
+    console.error("❌ Error in getInvoiceDownload:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to download invoice",
+      error: error.message
+    });
+  }
+};
+
+// Get order details with full tracking
+export const getOrderDetails = async (req, res) => {
+  try {
+    console.log("📋 getOrderDetails called");
+    console.log("📋 Request params:", req.params);
+    
+    // ✅ Use 'id' instead of 'orderId' to match route parameter
+    const orderId = req.params.id || req.params.orderId;
+    console.log("📋 Order ID:", orderId);
+    
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      console.log("❌ Invalid ObjectId:", orderId);
+      return res.status(400).json({ message: "Invalid order ID" });
+    }
+
+    console.log("📋 Order details request for:", orderId);
+
+    // ✅ Admin can access any order, user can only access their own orders
+    let order;
+    if (req.admin || req.user?.role === 'admin') {
+      // ✅ Admin access - use req.admin for admin middleware, req.user for user middleware
+      order = await Order.findById(orderId)
+        .populate("items.product")
+        .populate("user", "name email");
+    } else {
+      // ✅ User access - can only access their own orders
+      order = await Order.findOne({ 
+        _id: orderId, 
+        user: req.user?._id 
+      }).populate("items.product")
+        .populate("user", "name email");
+    }
+
+    if (!order) {
+      console.log("❌ Order not found in DB:", orderId);
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    console.log("📦 Full Order Data:", order);
+    res.json(order);
+
+  } catch (error) {
+    console.error("❌ Error in getOrderDetails:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get order details",
+      error: error.message
+    });
+  }
+};
+
+// Update order status (admin only)
+export const updateOrderStatusAdmin = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, message } = req.body;
+
+    console.log("🔄 Order status update request:", { orderId, status });
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Update status with automatic tracking history
+    await order.updateStatus(status, message);
+
+    console.log("✅ Order status updated:", order._id, "->", status);
+
+    res.json({
+      success: true,
+      message: "Order status updated successfully",
+      order: {
+        ...order.toObject(),
+        currentStep: ["pending", "confirmed", "shipped", "delivered","cancelled"].indexOf(order.orderStatus)
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error in updateOrderStatusAdmin:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order status",
+      error: error.message
+    });
+  }
+};
+
+export const placeCodOrder = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { items, shippingAddress, priceBreakup } = req.body;
+console.log("ORDER BODY 👉", req.body);
+console.log("USER 👉", req.user);
+const address = await Address.findById(shippingAddress);
+
+if (!address) {
+  return res.status(400).json({ message: "Invalid address" });
+}
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: "No items to order" });
+    }
+
+    // ✅ CREATE ORDER
+    // const order = await Order.create({
+    //   user: userId,
+    //   items,                 // 🔥 MUST EXIST
+    //   shippingAddress,
+    //   priceBreakup,
+    //   paymentMethod: "COD",
+    //   paymentStatus: "Pending",
+    //   orderStatus: "Pending",
+    // });
+//     const order = await Order.create({
+//   user: userId,
+//   items,
+//   shippingAddress,
+//   priceBreakup,
+//   paymentMethod: "COD",
+//   paymentStatus: "Pending",
+//   orderStatus: "Pending",
+//   trackingHistory: [
+//     {
+//       status: "Pending",
+//       message: "Order placed successfully",
+//       date: new Date(),
+//     },
+//   ],
+// });
+const order = await Order.create({
+  user: userId,
+  items,
+  shippingAddress: {
+    name: req.user.name,
+    email: req.user.email,
+    phone: address.phone || req.user.mobile,
+    address: [
+      address.house,
+      address.floor,
+      address.area,
+      address.landmark
+    ].filter(Boolean).join(", "),
+    city: address.city,
+    state: address.state,
+    pincode: address.pincode,
+  },
+  priceBreakup,
+  payment: {
+    method: "cod",
+    status: "pending"
+  },
+  orderStatus: "pending",
+});
+
+// ✅ POPULATE ORDER WITH COMPLETE DATA BEFORE INVOICE
+const populatedOrder = await Order.findById(order._id)
+  .populate('user', 'name email mobile');
+
+if (!populatedOrder.user || !populatedOrder.shippingAddress) {
+  throw new Error('Order data incomplete. Cannot generate invoice.');
+}
+
+// ✅ GENERATE INVOICE ONLY HERE
+const invoicePath = await generateInvoice(populatedOrder);
+
+    await sendMail({
+      to: req.user.email,
+      subject: "Order Invoice - PARIVA Jewellery",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Order Invoice - PARIVA Jewellery</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #1a1a1a; font-family: Arial, sans-serif; color: #ffffff;">
+          <div style="max-width: 800px; margin: 20px auto; background-color: #2a2a2a; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; border: 1px solid #d4af37;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); padding: 40px 30px; text-align: center; border-bottom: 2px solid #d4af37;">
+              <h1 style="margin: 0; color: #1a1a1a; font-size: 36px; font-weight: 300; letter-spacing: 3px;">PARIVA</h1>
+              <p style="margin: 8px 0 0 0; color: #1a1a1a; font-size: 16px; opacity: 0.9;">Fine Jewellery</p>
+              <div style="margin-top: 20px; padding: 15px 20px; background-color: rgba(26,26,26,0.2); border-radius: 8px; display: inline-block; backdrop-filter: blur(10px);">
+                <p style="margin: 0; color: #1a1a1a; font-size: 14px; font-weight: 600; letter-spacing: 1px;">ORDER INVOICE</p>
+                <p style="margin: 5px 0 0 0; color: #1a1a1a; font-size: 20px; font-weight: 700; letter-spacing: 1px;">#${order._id.toString().slice(-8).toUpperCase()}</p>
+              </div>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 40px 30px;">
+              <!-- Invoice Info -->
+              <div style="display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
+                <div style="flex: 1; min-width: 250px; background-color: #333333; padding: 20px; border-radius: 12px; border-left: 4px solid #d4af37;">
+                  <h3 style="margin: 0 0 10px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Invoice Date</h3>
+                  <p style="margin: 0; color: #ffffff; font-size: 15px; line-height: 1.4;">${new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+                <div style="flex: 1; min-width: 250px; background-color: #333333; padding: 20px; border-radius: 12px; border-left: 4px solid #d4af37;">
+                  <h3 style="margin: 0 0 10px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Order Status</h3>
+                  <div style="display: inline-block; padding: 8px 16px; background-color: #d4af37; border-radius: 20px; border: 2px solid #d4af37;">
+                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.orderStatus}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Customer Details -->
+              <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin-bottom: 30px; border: 1px solid #444444;">
+                <h3 style="margin: 0 0 20px 0; color: #d4af37; font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Customer Details</h3>
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 30px;">
+                  <div style="flex: 1; min-width: 200px;">
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Full Name:</strong> ${req.user.name || 'Customer'}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Email:</strong> ${req.user.email || 'customer@example.com'}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Mobile:</strong> ${order.shippingAddress?.mobile || req.user.mobile || ''}</p>
+                  </div>
+                  <div style="flex: 1; min-width: 200px;">
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Shipping Address:</strong></p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">${order.shippingAddress?.name || 'Home'}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">${order.shippingAddress?.addressLine || ''}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">${order.shippingAddress?.city || ''}, ${order.shippingAddress?.state || 'Gujarat'} ${order.shippingAddress?.pincode || ''}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">Phone: ${order.shippingAddress?.mobile || ''}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Product Table -->
+              <div style="margin-bottom: 30px; background-color: #333333; border-radius: 12px; padding: 25px 30px; border: 1px solid #444444;">
+                <h3 style="margin: 0 0 20px 0; color: #d4af37; font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Order Items</h3>
+                <div style="overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; min-width: 500px;">
+                    <thead>
+                      <tr style="background-color: #444444;">
+                        <th style="padding: 15px; text-align: left; color: #d4af37; font-size: 14px; font-weight: 600; border-bottom: 2px solid #d4af37;">Product Name</th>
+                        <th style="padding: 15px; text-align: center; color: #d4af37; font-size: 14px; font-weight: 600; border-bottom: 2px solid #d4af37;">Quantity</th>
+                        <th style="padding: 15px; text-align: right; color: #d4af37; font-size: 14px; font-weight: 600; border-bottom: 2px solid #d4af37;">Price</th>
+                        <th style="padding: 15px; text-align: right; color: #d4af37; font-size: 14px; font-weight: 600; border-bottom: 2px solid #d4af37;">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${order.items.map(item => `
+                        <tr style="border-bottom: 1px solid #444444;">
+                          <td style="padding: 15px; color: #ffffff; font-size: 14px; vertical-align: top;">
+                            <div style="font-weight: 500; margin-bottom: 5px;">${item.name || 'N/A'}</div>
+                            ${item.metal ? `<div style="color: #d4af37; font-size: 12px;">Metal: ${item.metal}</div>` : ''}
+                          </td>
+                          <td style="padding: 15px; text-align: center; color: #ffffff; font-size: 14px; vertical-align: middle;">${item.qty || 0}</td>
+                          <td style="padding: 15px; text-align: right; color: #ffffff; font-size: 14px; vertical-align: middle;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
+                          <td style="padding: 15px; text-align: right; color: #d4af37; font-size: 14px; font-weight: 600; vertical-align: middle;">₹${((item.price || 0) * (item.qty || 0)).toLocaleString('en-IN')}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Price Summary -->
+              <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin-bottom: 30px; border: 1px solid #444444;">
+                <h3 style="margin: 0 0 20px 0; color: #d4af37; font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Price Summary</h3>
+                <div style="max-width: 400px; margin-left: auto; background-color: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444444;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #444444;">
+                    <span style="color: #cccccc; font-size: 14px;">Gold Value:</span>
+                    <span style="color: #ffffff; font-size: 14px;">₹${(order.priceBreakup?.goldValue || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #444444;">
+                    <span style="color: #cccccc; font-size: 14px;">Making Charge:</span>
+                    <span style="color: #ffffff; font-size: 14px;">₹${(order.priceBreakup?.makingCharge || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #444444;">
+                    <span style="color: #cccccc; font-size: 14px;">Stone Charge:</span>
+                    <span style="color: #ffffff; font-size: 14px;">₹${(order.priceBreakup?.stoneCharge || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #444444;">
+                    <span style="color: #cccccc; font-size: 14px;">GST:</span>
+                    <span style="color: #ffffff; font-size: 14px;">₹${(order.priceBreakup?.gst || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-top: 15px; border-top: 2px solid #d4af37;">
+                    <span style="color: #d4af37; font-size: 16px; font-weight: 600;">Total Amount:</span>
+                    <span style="color: #d4af37; font-size: 18px; font-weight: 700;">₹${(order.priceBreakup?.totalAmount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Payment & Order Status -->
+              <div style="display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
+                <div style="flex: 1; min-width: 250px; background-color: #333333; padding: 20px; border-radius: 12px; border-left: 4px solid #d4af37;">
+                  <h3 style="margin: 0 0 10px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Payment Method</h3>
+                  <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: 500;">${order.paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}</p>
+                </div>
+                <div style="flex: 1; min-width: 250px; background-color: #333333; padding: 20px; border-radius: 12px; border-left: 4px solid #d4af37;">
+                  <h3 style="margin: 0 0 10px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Payment Status</h3>
+                  <div style="display: inline-block; padding: 8px 16px; background-color: ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"}; border-radius: 20px; border: 2px solid ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"};">
+                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.paymentStatus}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer Note -->
+              <div style="text-align: center; padding: 25px; background-color: #2a2a2a; border-radius: 12px; border: 1px solid #d4af37;">
+                <p style="margin: 0; color: #d4af37; font-size: 16px; font-weight: 500; line-height: 1.5;">
+                  Thank you for your order! Your invoice is attached to this email for your records.
+                </p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #1a1a1a; padding: 30px 40px; text-align: center; border-top: 2px solid #d4af37;">
+              <p style="margin: 0 0 10px 0; color: #d4af37; font-size: 18px; font-weight: 300; letter-spacing: 2px;">PARIVA Jewellery</p>
+              <p style="margin: 5px 0; color: #cccccc; font-size: 13px;">Excellence in Every Facet</p>
+              <div style="margin: 20px 0; padding: 15px 0; border-top: 1px solid #444444;">
+                <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                  © 2024 PARIVA Jewellery. All rights reserved.
+                </p>
+                <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                  Contact: senjaliyaprince009@gmail.com | +91 97149 07350
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </body>
+        </html>
+      `,
+      attachments: [
+  {
+    filename: `invoice-${order._id}.pdf`,
+    content: invoicePath,   // 👈 IMPORTANT
+    contentType: "application/pdf"
+  },
+],
+    });
+
+    // 🧹 CLEAR CART
+    await Cart.findOneAndUpdate(
+      { user: userId },
+      { items: [] }
+    );
+
+    res.status(201).json({
+      message: "COD Order placed successfully",
+      order,
+    });
+  } catch (err) {
+  console.error("COD ORDER ERROR 👉", err.message);
+  console.error(err);
+  res.status(500).json({
+    message: "Order failed",
+    error: err.message,
+  });
+}
+
+};
+
+// USER – MY ORDERS
+export const getMyOrders = async (req, res) => {
+  console.log("👤 Fetching orders for user:", req.user._id);
+  
+  const orders = await Order.find({ user: req.user._id })
+    .populate("user", "name email mobile")
+    .sort({ createdAt: -1 });
+
+  console.log("👤 Orders found:", orders.length);
+  res.json(orders);
+};
+
+// ADMIN: get all orders
+export const getAllOrders = async (req, res) => {
+  console.log("📊 Admin fetching all orders");
+  
+  const orders = await Order.find()
+    .populate("user", "name email")
+    .sort({ createdAt: -1 });
+
+  const formattedOrders = orders.map(order => {
+    console.log("📦 Admin Order Payment Object:", order.payment);
+
+    return {
+      ...order.toObject(),
+      paymentMethod: order.payment?.method || "N/A"
+    };
+  });
+
+  console.log("📊 Total Orders Sent To Admin:", formattedOrders.length);
+  res.json(formattedOrders);
+};
+
+// ADMIN: update order status
+export const updateOrderStatus = async (req, res) => {
+  try{
+  console.log("🔄 updateOrderStatus called");
+
+  const { status } = req.body;
+  const { orderId } = req.params;
+  console.log("🔄 Order ID:", req.params.orderId);
+  console.log("🔄 Requested Status:", req.body.status);
+  
+  const allowedStatuses = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+  console.log("Allowed Statuses:", allowedStatuses);
+console.log("Requested Status:", status);
+  if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value" });
+    }
+
+  const order = await Order.findByIdAndUpdate(
+  orderId,
+  { orderStatus: status },
+  { new: true }
+).populate("user", "name email");
+      
+   if (!order) {
+     console.log("❌ Order not found for update");
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+  order.trackingHistory.push({
+  status,
+  message: `Order ${status}`,
+  date: new Date(),
+});
+
+  order.orderStatus = status;
+
+  if (status === "delivered") {
+    order.paymentStatus = "paid";
+  }
+
+  await order.save();
+
+  console.log("✅ Order status updated successfully:", order.orderStatus);
+  console.log("� Updating order:", req.params.orderId);
+
+  // 📧 EMAIL TRIGGER
+  try {
+  await sendMail({
+    to: order.user.email,
+    subject: `Order ${status} - PARIVA Jewellery`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Order ${status} - PARIVA Jewellery</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #1a1a1a; font-family: Arial, sans-serif; color: #ffffff;">
+        <div style="max-width: 600px; margin: 20px auto; background-color: #2a2a2a; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; border: 1px solid #d4af37;">
+          
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); padding: 40px 30px; text-align: center; border-bottom: 2px solid #d4af37;">
+            <h1 style="margin: 0; color: #1a1a1a; font-size: 32px; font-weight: 300; letter-spacing: 3px;">PARIVA</h1>
+            <p style="margin: 8px 0 0 0; color: #1a1a1a; font-size: 14px; opacity: 0.9;">Fine Jewellery</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 50px 40px;">
+            <h2 style="margin: 0 0 25px 0; color: #ffffff; font-size: 28px; font-weight: 400; text-align: center;">
+              ${status === "Shipped" ? "Your Order Has Been Shipped" : 
+                status === "Delivered" ? "Order Delivered Successfully" : 
+                `Order ${status}`}
+            </h2>
+            
+            <!-- Status Badge -->
+            <div style="text-align: center; margin: 35px 0;">
+              <div style="display: inline-block; padding: 15px 30px; background-color: ${status === "Delivered" ? "#d4af37" : status === "Shipped" ? "#2196f3" : "#ff6b35"}; border-radius: 50px; border: 2px solid ${status === "Delivered" ? "#d4af37" : status === "Shipped" ? "#2196f3" : "#ff6b35"}; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                <span style="color: #1a1a1a; font-size: 16px; font-weight: 700; letter-spacing: 1px;">
+                  ${status.toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            <!-- Message -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 30px; margin: 35px 0; border-left: 4px solid #d4af37;">
+              <p style="margin: 0 0 15px 0; color: #ffffff; font-size: 16px; line-height: 1.6; font-weight: 500;">
+                Hello ${order.user?.name || 'Valued Customer'},
+              </p>
+              <p style="margin: 0; color: #cccccc; font-size: 16px; line-height: 1.6;">
+                ${status === "Shipped" ? 
+                  `Great news! Your order #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'} has been shipped and is on its way to you. You can expect delivery within 3-5 business days.` :
+                  status === "Delivered" ? 
+                  `Wonderful! Your order #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'} has been successfully delivered. We hope you love your new jewellery!` :
+                  `Your order #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'} status has been updated to ${status}.`
+                }
+              </p>
+            </div>
+
+            <!-- Order Details -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin: 30px 0; border: 1px solid #444444;">
+              <p style="margin: 0 0 15px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Order Details</p>
+              <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                <div style="flex: 1; min-width: 200px;">
+                  <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Order ID:</strong> #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'}
+                  </p>
+                  <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Status:</strong> ${status}
+                  </p>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                  <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Update Date:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                  ${status === "Delivered" ? `
+                  <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Delivery Date:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Status -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin: 30px 0; border: 1px solid #444444;">
+              <p style="margin: 0 0 15px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Payment Information</p>
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div style="flex: 1; min-width: 200px;">
+                  <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Payment Method:</strong> ${order.paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}
+                  </p>
+                  <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Total Amount:</strong> <span style="color: #d4af37; font-weight: 600;">₹${(order.priceBreakup?.totalAmount || 0).toLocaleString('en-IN')}</span>
+                  </p>
+                </div>
+                <div style="flex: 1; min-width: 200px; text-align: right;">
+                  <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Payment Status:</strong>
+                  </p>
+                  <div style="display: inline-block; padding: 8px 16px; background-color: ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"}; border-radius: 20px; border: 2px solid ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"};">
+                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.paymentStatus}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="http://localhost:5173/account/orders/${order._id}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); color: #1a1a1a; text-decoration: none; padding: 18px 45px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s ease;">
+                ${status !== "Delivered" ? "Track Your Order" : "View Order Details"}
+              </a>
+            </div>
+
+            <!-- Thank You Note -->
+            <div style="text-align: center; padding: 25px; background-color: #2a2a2a; border-radius: 12px; border: 1px solid #d4af37;">
+              <p style="margin: 0; color: #d4af37; font-size: 16px; font-weight: 500; line-height: 1.5;">
+                ${status === "Delivered" ? 
+                  "Thank you for choosing PARIVA Jewellery! We hope your new pieces bring you joy and elegance." :
+                  "Thank you for shopping with PARIVA Jewellery! We appreciate your trust in our craftsmanship."
+                }
+              </p>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #1a1a1a; padding: 30px 40px; text-align: center; border-top: 2px solid #d4af37;">
+            <p style="margin: 0 0 10px 0; color: #d4af37; font-size: 18px; font-weight: 300; letter-spacing: 2px;">PARIVA Jewellery</p>
+            <p style="margin: 5px 0; color: #cccccc; font-size: 13px;">Excellence in Every Facet</p>
+            <div style="margin: 20px 0; padding: 15px 0; border-top: 1px solid #444444;">
+              <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                © 2024 PARIVA Jewellery. All rights reserved.
+              </p>
+              <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                Contact: senjaliyaprince009@gmail.com | +91 97149 07350
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </body>
+      </html>
+    `
+  });
+  } catch (mailError) {
+      console.error("Email failed but status updated:", mailError.message);
+    }
+
+    return res.json({
+      success: true,
+      message: "Order status updated successfully",
+      order
+    });
+
+  } catch (err) {
+    console.error("Update Status Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+};
+
+export const downloadInvoice = async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // 🔥 generate / reuse invoice
+    const invoicePath = await generateInvoice(order);
+
+    res.download(invoicePath, `invoice-${order._id}.pdf`);
+  } catch (err) {
+    console.error("Invoice download error:", err);
+    res.status(500).json({ message: "Invoice download failed" });
+  }
+};
+export const getAdminOrderById = async (req, res) => {
+  const order = await Order.findById(req.params.id)
+    .populate("user", "name email");
+
+  if (!order)
+    return res.status(404).json({ message: "Order not found" });
+
+  res.json(order);
+};
+export const cancelOrderItem = async (req, res) => {
+  const { itemId } = req.body;
+  
+  const order = await Order.findOne({
+    _id: req.params.id,
+    user: req.user._id,
+  }).populate("user", "name email");
+
+  if (!order)
+    return res.status(404).json({ message: "Order not found" });
+
+  if (order.orderStatus !== "Pending" && order.orderStatus !== "Confirmed") {
+    return res
+      .status(400)
+      .json({ message: "Items cannot be cancelled now" });
+  }
+
+  const itemToCancel = order.items.find(item => item._id.toString() === itemId);
+  if (!itemToCancel)
+    return res.status(404).json({ message: "Item not found in order" });
+
+  // Remove the item
+  order.items = order.items.filter(item => item._id.toString() !== itemId);
+
+  // Recalculate total
+  const newTotal = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  order.priceBreakup.totalAmount = newTotal;
+
+  // If no items left, cancel the entire order
+  if (order.items.length === 0) {
+    order.orderStatus = "Cancelled";
+    if (order.paymentMethod === "ONLINE" && order.paymentStatus === "Paid") {
+      await razorpay.payments.refund(order.razorpayPaymentId, {
+        amount: Math.round(order.priceBreakup.total * 100),
+      });
+      order.paymentStatus = "Refunded";
+    }
+  }
+
+  await order.save();
+
+  // 📧 SEND ITEM CANCELLATION EMAIL
+  await sendMail({
+    to: order.user.email,
+    subject: order.items.length === 0 ? "Order Cancelled - PARIVA Jewellery" : "Item Cancelled - PARIVA Jewellery",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${order.items.length === 0 ? "Order" : "Item"} Cancelled - PARIVA Jewellery</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #1a1a1a; font-family: Arial, sans-serif; color: #ffffff;">
+        <div style="max-width: 600px; margin: 20px auto; background-color: #2a2a2a; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; border: 1px solid #d4af37;">
+          
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); padding: 40px 30px; text-align: center; border-bottom: 2px solid #d4af37;">
+            <h1 style="margin: 0; color: #1a1a1a; font-size: 32px; font-weight: 300; letter-spacing: 3px;">PARIVA</h1>
+            <p style="margin: 8px 0 0 0; color: #1a1a1a; font-size: 14px; opacity: 0.9;">Fine Jewellery</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 50px 40px;">
+            <h2 style="margin: 0 0 25px 0; color: #ffffff; font-size: 28px; font-weight: 400; text-align: center;">
+              ${order.items.length === 0 ? "Order Cancelled" : "Item Cancelled"}
+            </h2>
+            
+            <!-- Cancel Badge -->
+            <div style="text-align: center; margin: 35px 0;">
+              <div style="display: inline-block; width: 90px; height: 90px; background: linear-gradient(135deg, #f44336 0%, #e57373 100%); border-radius: 50%; padding: 25px; box-shadow: 0 4px 20px rgba(244, 67, 54, 0.4);">
+                <svg style="width: 40px; height: 40px; fill: #ffffff;" viewBox="0 0 24 24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Message -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 30px; margin: 35px 0; border-left: 4px solid #f44336;">
+              <p style="margin: 0 0 15px 0; color: #ffffff; font-size: 16px; line-height: 1.6; font-weight: 500;">
+                Hello ${order.user?.name || 'Valued Customer'},
+              </p>
+              <p style="margin: 0; color: #cccccc; font-size: 16px; line-height: 1.6;">
+                ${order.items.length === 0 ? 
+                  `Your order #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'} has been successfully cancelled.` :
+                  `The item "${itemToCancel?.name || 'N/A'}" from your order #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'} has been cancelled.`
+                } We sincerely apologize for any inconvenience.
+              </p>
+            </div>
+
+            <!-- Cancelled Item Details -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin: 30px 0; border: 1px solid #444444;">
+              <p style="margin: 0 0 20px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
+                ${order.items.length === 0 ? "Cancelled Order" : "Cancelled Item"}
+              </p>
+              <div style="padding: 20px; background-color: #2a2a2a; border-radius: 8px; border: 1px solid #444444;">
+                <p style="margin: 0 0 10px 0; color: #ffffff; font-size: 16px; font-weight: 500;">${itemToCancel?.name || 'N/A'}</p>
+                ${itemToCancel?.metal ? `<p style="margin: 0 0 10px 0; color: #d4af37; font-size: 14px;">Metal: ${itemToCancel.metal}</p>` : ''}
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <p style="margin: 0; color: #cccccc; font-size: 14px;">Quantity: ${itemToCancel?.qty || 0}</p>
+                  <p style="margin: 0; color: #d4af37; font-size: 16px; font-weight: 600;">₹${((itemToCancel?.price || 0) * (itemToCancel?.qty || 0)).toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+            </div>
+
+            ${order.items.length > 0 ? `
+            <!-- Remaining Items -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin: 30px 0; border: 1px solid #444444;">
+              <p style="margin: 0 0 20px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Remaining Items</p>
+              <div style="max-height: 200px; overflow-y: auto;">
+                ${order.items.map(item => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #444444;">
+                    <div style="flex: 1;">
+                      <p style="margin: 0 0 5px 0; color: #ffffff; font-size: 14px; font-weight: 500;">${item?.name || 'N/A'}</p>
+                      ${item?.metal ? `<p style="margin: 0; color: #d4af37; font-size: 12px;">Metal: ${item.metal}</p>` : ''}
+                    </div>
+                    <div style="text-align: right;">
+                      <p style="margin: 0; color: #cccccc; font-size: 14px;">Qty: ${item?.qty || 0}</p>
+                      <p style="margin: 0; color: #d4af37; font-size: 14px; font-weight: 600;">₹${((item?.price || 0) * (item?.qty || 0)).toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #d4af37;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <p style="margin: 0; color: #d4af37; font-size: 16px; font-weight: 600;">New Order Total:</p>
+                  <p style="margin: 0; color: #d4af37; font-size: 18px; font-weight: 700;">₹${(order.priceBreakup?.totalAmount || 0).toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+            </div>
+            ` : ''}
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="http://localhost:5173/account/orders/${order._id}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); color: #1a1a1a; text-decoration: none; padding: 18px 45px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s ease;">
+                View Order Details
+              </a>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #1a1a1a; padding: 30px 40px; text-align: center; border-top: 2px solid #d4af37;">
+            <p style="margin: 0 0 10px 0; color: #d4af37; font-size: 18px; font-weight: 300; letter-spacing: 2px;">PARIVA Jewellery</p>
+            <p style="margin: 5px 0; color: #cccccc; font-size: 13px;">Excellence in Every Facet</p>
+            <div style="margin: 20px 0; padding: 15px 0; border-top: 1px solid #444444;">
+              <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                © 2024 PARIVA Jewellery. All rights reserved.
+              </p>
+              <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                Contact: senjaliyaprince009@gmail.com | +91 97149 07350
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  });
+
+  res.json({ 
+    message: order.items.length === 0 ? "Order cancelled" : "Item cancelled successfully",
+    order 
+  });
+};
+
+export const cancelOrder = async (req, res) => {
+  console.log("🚫 cancelOrder called");
+  console.log("🚫 Order ID:", req.params.orderId);
+  
+  const { orderId } = req.params;
+  
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    console.log("❌ Invalid ObjectId:", orderId);
+    return res.status(400).json({ message: "Invalid order ID" });
+  }
+  
+  const order = await Order.findById(orderId)
+    .populate("user", "name email");
+
+  if (!order) {
+    console.log("❌ Order not found for cancellation:", orderId);
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  if (order.orderStatus !== "pending" && order.orderStatus !== "confirmed") {
+    return res
+      .status(400)
+      .json({ message: "Order cannot be cancelled now" });
+  }
+
+  order.orderStatus = "cancelled";
+  await order.save();
+
+  console.log("✅ Order cancelled successfully:", orderId);
+
+  // 🔁 ONLINE PAYMENT REFUND
+  if (order.paymentMethod === "ONLINE" && order.paymentStatus === "Paid") {
+    await razorpay.payments.refund(order.razorpayPaymentId, {
+      amount: Math.round(order.priceBreakup.total * 100),
+    });
+
+    order.paymentStatus = "Refunded";
+  }
+
+  order.orderStatus = "cancelled";
+  await order.save();
+
+  console.log("✅ Order cancelled successfully:", orderId);
+
+  // 📧 SEND CANCELLATION EMAIL
+  await sendMail({
+    to: order.user.email,
+    subject: "Order Cancelled - PARIVA Jewellery",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Order Cancelled - PARIVA Jewellery</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #1a1a1a; font-family: Arial, sans-serif; color: #ffffff;">
+        <div style="max-width: 600px; margin: 20px auto; background-color: #2a2a2a; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; border: 1px solid #d4af37;">
+          
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); padding: 40px 30px; text-align: center; border-bottom: 2px solid #d4af37;">
+            <h1 style="margin: 0; color: #1a1a1a; font-size: 32px; font-weight: 300; letter-spacing: 3px;">PARIVA</h1>
+            <p style="margin: 8px 0 0 0; color: #1a1a1a; font-size: 14px; opacity: 0.9;">Fine Jewellery</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 50px 40px;">
+            <h2 style="margin: 0 0 25px 0; color: #ffffff; font-size: 28px; font-weight: 400; text-align: center;">Order Cancelled</h2>
+            
+            <!-- Cancel Badge -->
+            <div style="text-align: center; margin: 35px 0;">
+              <div style="display: inline-block; width: 90px; height: 90px; background: linear-gradient(135deg, #f44336 0%, #e57373 100%); border-radius: 50%; padding: 25px; box-shadow: 0 4px 20px rgba(244, 67, 54, 0.4);">
+                <svg style="width: 40px; height: 40px; fill: #ffffff;" viewBox="0 0 24 24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Message -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 30px; margin: 35px 0; border-left: 4px solid #f44336;">
+              <p style="margin: 0 0 15px 0; color: #ffffff; font-size: 16px; line-height: 1.6; font-weight: 500;">
+                Hello ${order.user?.name || 'Valued Customer'},
+              </p>
+              <p style="margin: 0; color: #cccccc; font-size: 16px; line-height: 1.6;">
+                Your order #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'} has been successfully cancelled. We sincerely apologize for any inconvenience this may have caused.
+              </p>
+            </div>
+
+            <!-- Order Details -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin: 30px 0; border: 1px solid #444444;">
+              <p style="margin: 0 0 20px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Order Details</p>
+              <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                <div style="flex: 1; min-width: 200px;">
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Order ID:</strong> #${order._id?.toString().slice(-8).toUpperCase() || 'N/A'}
+                  </p>
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Status:</strong> 
+                    <span style="display: inline-block; padding: 6px 12px; background-color: #f44336; border-radius: 15px; border: 1px solid #f44336; color: #ffffff; font-size: 12px; font-weight: 500;">Cancelled</span>
+                  </p>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Cancellation Date:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Payment Method:</strong> ${order.paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Refund Status -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin: 30px 0; border: 1px solid #444444;">
+              <p style="margin: 0 0 20px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Refund Information</p>
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div style="flex: 1; min-width: 200px;">
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Order Amount:</strong> <span style="color: #d4af37; font-weight: 600;">₹${(order.priceBreakup?.totalAmount || 0).toLocaleString('en-IN')}</span>
+                  </p>
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Refund Status:</strong>
+                  </p>
+                  <div style="display: inline-block; padding: 8px 16px; background-color: ${order.paymentStatus === "Refunded" ? "#4caf50" : "#ff9800"}; border-radius: 20px; border: 2px solid ${order.paymentStatus === "Refunded" ? "#4caf50" : "#ff9800"};">
+                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.paymentStatus === "Refunded" ? "Refunded" : "No Refund Needed"}</span>
+                  </div>
+                </div>
+                <div style="flex: 1; min-width: 200px; text-align: right;">
+                  ${order.paymentStatus === "Refunded" ? `
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
+                    <strong style="color: #d4af37;">Refund Amount:</strong> <span style="color: #4caf50; font-weight: 600;">₹${(order.priceBreakup?.totalAmount || 0).toLocaleString('en-IN')}</span>
+                  </p>
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 13px; line-height: 1.4;">
+                    Refund will be processed to your original payment method within 5-7 business days.
+                  </p>
+                  ` : `
+                  <p style="margin: 10px 0; color: #cccccc; font-size: 13px; line-height: 1.4;">
+                    No payment was processed for this order, so no refund is needed.
+                  </p>
+                  `}
+                </div>
+              </div>
+            </div>
+
+            <!-- Cancelled Items -->
+            <div style="background-color: #333333; border-radius: 12px; padding: 25px 30px; margin: 30px 0; border: 1px solid #444444;">
+              <p style="margin: 0 0 20px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Cancelled Items</p>
+              <div style="max-height: 200px; overflow-y: auto;">
+                ${(order.items || []).map(item => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #444444;">
+                    <div style="flex: 1;">
+                      <p style="margin: 0 0 5px 0; color: #ffffff; font-size: 14px; font-weight: 500;">${item?.name || 'N/A'}</p>
+                      ${item?.metal ? `<p style="margin: 0; color: #d4af37; font-size: 12px;">Metal: ${item.metal}</p>` : ''}
+                    </div>
+                    <div style="text-align: right;">
+                      <p style="margin: 0; color: #cccccc; font-size: 14px;">Qty: ${item?.qty || 0}</p>
+                      <p style="margin: 0; color: #d4af37; font-size: 14px; font-weight: 600;">₹${((item?.price || 0) * (item?.qty || 0)).toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Apology Note -->
+            <div style="text-align: center; padding: 25px; background-color: #2a2a2a; border-radius: 12px; border: 1px solid #d4af37;">
+              <p style="margin: 0; color: #d4af37; font-size: 16px; font-weight: 500; line-height: 1.5;">
+                We apologize for any inconvenience caused. If you have any questions or need assistance with future orders, please don't hesitate to contact our customer support team.
+              </p>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="http://localhost:5173/shop" 
+                 style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); color: #1a1a1a; text-decoration: none; padding: 18px 45px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s ease;">
+                Continue Shopping
+              </a>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #1a1a1a; padding: 30px 40px; text-align: center; border-top: 2px solid #d4af37;">
+            <p style="margin: 0 0 10px 0; color: #d4af37; font-size: 18px; font-weight: 300; letter-spacing: 2px;">PARIVA Jewellery</p>
+            <p style="margin: 5px 0; color: #cccccc; font-size: 13px;">Excellence in Every Facet</p>
+            <div style="margin: 20px 0; padding: 15px 0; border-top: 1px solid #444444;">
+              <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                © 2024 PARIVA Jewellery. All rights reserved.
+              </p>
+              <p style="margin: 5px 0; color: #999999; font-size: 12px;">
+                Contact: senjaliyaprince009@gmail.com | +91 97149 07350
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </body>
+      </html>
+    `
+  });
+
+  res.json({ message: "Order cancelled & refund initiated" });
+};
+export const addTrackingInfo = async (req, res) => {
+  const { courier, trackingId, status } = req.body;
+  const { orderId } = req.params;
+
+  const order = await Order.findById(orderId);
+  if (!order) return res.status(404).json({ message: "Order not found" });
+
+  // order.tracking = {
+  //   courier,
+  //   trackingId,
+  //   status,
+  // };
+order.trackingHistory.push({
+  status,
+  message: `${courier} - Tracking ID: ${trackingId}`,
+  date: new Date(),
+});
+
+  await order.save();
+  res.json(order);
+};
+export const getOrderById = async (req, res) => {
+  const { orderId } = req.params;
+  const order = await Order.findOne({
+    _id: orderId,
+    user: req.user._id,
+  });
+
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  res.json(order);
+};
+
+// USER – DELETE CANCELLED ORDER
+export const deleteOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    if (order.orderStatus !== "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Only cancelled orders can be removed"
+      });
+    }
+
+    await order.deleteOne();
+
+    return res.json({
+      success: true,
+      message: "Order removed successfully"
+    });
+
+  } catch (err) {
+    console.error("Delete error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
