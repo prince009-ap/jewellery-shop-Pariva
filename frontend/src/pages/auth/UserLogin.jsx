@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 import "../auth.css";
 
 function UserLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +45,7 @@ function UserLogin() {
       // ✅ FIXED API REQUEST: Proper data structure
       await API.post("/auth/login-password-otp", {
         email: email.trim().toLowerCase(),
-        password: password,
+        password: password.trim(),
       });
 
       // ✅ password correct → OTP sent
@@ -89,10 +91,9 @@ function UserLogin() {
         otp: otp.trim(),
       });
 
-      // ✅ FIXED: Store token properly
-      if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+      // Hydrate auth context immediately (also persists token/user).
+      if (res.data.token && res.data.user) {
+        await login(res.data.user, res.data.token);
       }
       
       navigate("/home", { replace: true });

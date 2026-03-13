@@ -1,0 +1,328 @@
+.admin-coupons-page {
+  min-height: 100vh;
+  padding: 28px;
+  background:
+    radial-gradient(1000px 480px at 0% -10%, #fff8df 0%, transparent 60%),
+    radial-gradient(1200px 700px at 100% 0%, #dff6f3 0%, transparent 55%),
+    linear-gradient(180deg, #f4efe2, #eef4f6);
+}
+
+.acp-shell {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+}
+
+.acp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.acp-crumb-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: #111827;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acp-crumb-btn:hover {
+  text-decoration: underline;
+}
+
+.acp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  background: linear-gradient(120deg, #ffffff 0%, #fffaf0 55%, #f3f8fb 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.acp-kicker {
+  margin: 0 0 8px;
+  color: #b48313;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.acp-header h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.5rem, 2.4vw, 2.25rem);
+  line-height: 1.1;
+}
+
+.acp-header p {
+  margin: 10px 0 0;
+  color: #334155;
+}
+
+.acp-meta {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.acp-form-card,
+.acp-table-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.acp-form-card h3 {
+  margin: 0 0 12px;
+  color: #1f334d;
+  font-size: 1.2rem;
+}
+
+.acp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.acp-form-grid input,
+.acp-form-grid select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: #fff;
+  color: #1f334d;
+  outline: none;
+}
+
+.acp-form-grid input:focus,
+.acp-form-grid select:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2);
+}
+
+.acp-checkbox {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: #1f334d;
+  background: #fff;
+}
+
+.acp-checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.acp-checkbox span {
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.acp-table-wrap {
+  overflow-x: auto;
+}
+
+.acp-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.acp-table th {
+  padding: 12px 10px;
+  text-align: left;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  font-weight: 700;
+  background: #f8fbfd;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.acp-table th:first-child {
+  border-top-left-radius: 10px;
+}
+
+.acp-table th:last-child {
+  border-top-right-radius: 10px;
+}
+
+.acp-table td {
+  padding: 12px 10px;
+  color: #233c5a;
+  font-weight: 500;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.acp-table tr:hover td {
+  background: #fcfdff;
+}
+
+.acp-code-cell {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.acp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 7px 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.acp-status-pill.active {
+  background: #e9f8ef;
+  border: 1px solid #b8e7cc;
+  color: #0f7a4f;
+}
+
+.acp-status-pill.disabled {
+  background: #fff2f3;
+  border: 1px solid #f3c3ca;
+  color: #a33340;
+}
+
+.acp-btn {
+  border-radius: 9999px;
+  min-height: 38px;
+  padding: 8px 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid #d6d0c2;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f5ee 100%);
+  color: #263a53;
+}
+
+.acp-btn:hover {
+  border-color: #c7bda6;
+  background: linear-gradient(180deg, #fffef9 0%, #f3eada 100%);
+  box-shadow: 0 10px 18px rgba(60, 46, 18, 0.15);
+}
+
+.acp-btn-primary {
+  border-color: #b7dcca;
+  background: linear-gradient(180deg, #f4fcf8 0%, #e9f7ef 100%);
+  color: #1d6b46;
+}
+
+.acp-btn.danger {
+  border-color: #e7bcc3;
+  background: linear-gradient(180deg, #fffafa 0%, #fff0f2 100%);
+  color: #953341;
+}
+
+.acp-btn.success {
+  border-color: #b7dcca;
+  background: linear-gradient(180deg, #f4fcf8 0%, #e9f7ef 100%);
+  color: #1d6b46;
+}
+
+.acp-btn.remove {
+  border-color: #d6d0c2;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f5ee 100%);
+  color: #4a5568;
+}
+
+.acp-action-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.acp-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.acp-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #64748b;
+}
+
+.acp-toast {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 1300;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 12px 25px rgba(15, 23, 42, 0.14);
+}
+
+.acp-toast-success {
+  background: #effaf4;
+  border-color: #bde5cd;
+  color: #1e6a45;
+}
+
+.acp-toast-error {
+  background: #fff4f5;
+  border-color: #f2c3c9;
+  color: #9f2f3f;
+}
+
+@media (max-width: 1100px) {
+  .acp-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-coupons-page {
+    padding: 16px;
+  }
+
+  .acp-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .acp-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .acp-toast {
+    left: 16px;
+    right: 16px;
+    top: 14px;
+    text-align: center;
+  }
+}

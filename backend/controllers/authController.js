@@ -14,27 +14,25 @@ const generateToken = (id, role = "user") => {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password,mobile, dob, gender } = req.body;
+    const { name, email, password, mobile, dob, gender } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
     // 1️⃣ Validation
-    if (!name || !email || !mobile ||!password || !dob || !gender) {
+    if (!name || !normalizedEmail || !mobile || !password || !dob || !gender) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     // 2️⃣ User exists check
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // 3️⃣ Password hash
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // 4️⃣ Create user
+    // 3️⃣ Create user (password will be hashed via User model middleware)
     const user = await User.create({
       name,
-      email,
-      password: hashedPassword,
+      email: normalizedEmail,
+      password,
       mobile,
       dob,
       gender,
@@ -59,9 +57,10 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
-    if (!email || !password) return res.status(400).json({ message: "Missing credentials" });
+    const normalizedEmail = email?.trim().toLowerCase();
+    if (!normalizedEmail || !password) return res.status(400).json({ message: "Missing credentials" });
 
-    const user = await User.findOne({ email, role });
+    const user = await User.findOne({ email: normalizedEmail, role });
     if (!user) return res.status(401).json({ message: "Access denied" });
 
     const ok = await bcrypt.compare(password, user.password);
@@ -240,17 +239,19 @@ export const logoutUser = (req, res) => {
 
 
 export const loginWithPasswordAndOtp = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(401).json({ message: "Invalid password" });
-  }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid password. If you forgot it, use Forgot Password to reset." });
+    }
 
   // 🔢 Generate OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -338,9 +339,16 @@ export const loginWithPasswordAndOtp = async (req, res) => {
     `
   });
 
-  res.json({ message: "OTP sent to email" });
-
+    res.json({ message: "OTP sent to email" });
+  } catch (error) {
+    console.error("Login with password & OTP error:", error);
+    res.status(500).json({
+      message: "Server error during login",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
+
 export const verifyLoginOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -509,9 +517,9 @@ export const verifyLoginOtp = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("OTP verification error:", error);
-    res.status(500).json({ 
-      message: "Server error during OTP verification",
+    console.error("Login with password & OTP error:", error);
+    res.status(500).json({
+      message: "Server error during login",
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

@@ -4,7 +4,7 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div className="admin-dashboard-container">
       <h2>Admin Panel</h2>
       <p>Logged in as: {user?.email}</p>
 

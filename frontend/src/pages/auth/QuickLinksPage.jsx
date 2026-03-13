@@ -191,8 +191,7 @@ function QuickLinksPage() {
                 <p style={{ color: '#666', lineHeight: '1.6' }}>
                   For order inquiries, product questions, or after-sales support:<br />
                   • Call us: +91 97149 07350<br />
-                  • Email: support@parivajewels.com<br />
-                  • Live chat available on website
+                  • Email: support@parivajewels.com
                 </p>
               </div>
             </div>

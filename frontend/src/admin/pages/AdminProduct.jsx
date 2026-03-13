@@ -16,7 +16,7 @@ function AdminProduct() {
 
   const deleteHandler = async (id) => {
     if (!window.confirm("Delete this product?")) return;
-    const token = localStorage.getItem("adminToken");
+    const token = sessionStorage.getItem("adminToken");
     await adminAPI.delete(`/admin/products/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });

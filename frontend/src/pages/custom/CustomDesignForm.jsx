@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import API from "../../services/api";
-import { useNavigate } from "react-router-dom";
-import MyCustomDesigns from "../account/CustomDesignStatus";
+import { Link, useNavigate } from "react-router-dom";
 
 const JEWELLERY_TYPES = ["Ring", "Necklace", "Bangle", "Bracelet", "Earrings", "Pendant", "Chain", "Other"];
 const METALS = ["Gold", "Silver", "Platinum", "Rose Gold", "White Gold", "Brass", "Copper", "Alloy", "Stainless Steel"];
@@ -96,6 +95,7 @@ const PURPOSE_SUGGESTIONS = {
 export default function CustomDesignForm() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [message, setMessage] = useState(null);
 
   const [form, setForm] = useState({
   budgetTier: null, // New budget-first selection
@@ -117,7 +117,16 @@ export default function CustomDesignForm() {
 
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [ setSubmitted] = useState(false);
+  const [, setSubmitted] = useState(false);
+  const imagePreview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   /* 🔢 LIVE ESTIMATE (frontend only – admin final karega) */
   const estimate = useMemo(() => {
@@ -226,24 +235,28 @@ export default function CustomDesignForm() {
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setMessage(null);
 
     // Budget tier validation
     if (!form.budgetTier) {
-      alert("Please select your budget range first");
+      setMessage({ type: "error", text: "Please select your budget range first." });
       setLoading(false);
       return;
     }
 
     // Validation for custom jewellery type
     if (form.jewelleryType === "Other" && !form.customJewelleryType.trim()) {
-      alert("Please specify jewellery type when selecting 'Other'");
+      setMessage({ type: "error", text: "Please specify jewellery type when selecting 'Other'." });
       setLoading(false);
       return;
     }
 
     // Smart budget validation
     if (!budgetValidation.valid) {
-      alert(budgetValidation.message + "\n\n💡 Suggestion: " + budgetValidation.suggestion);
+      setMessage({
+        type: "error",
+        text: `${budgetValidation.message} Suggestion: ${budgetValidation.suggestion}`,
+      });
       setLoading(false);
       return;
     }
@@ -273,10 +286,13 @@ export default function CustomDesignForm() {
       await API.post("/custom-design", fd);
 
       setSubmitted(true);
+      setMessage({ type: "success", text: "Design request submitted successfully." });
       navigate("/my-custom-designs");
     } catch (err) {
       console.error("SUBMIT ERROR:", err.response?.data || err.message);
-      alert("Failed: " + err.response?.data?.message);  
+      const errorMessage =
+        err.response?.data?.message || err.message || "Something went wrong";
+      setMessage({ type: "error", text: `Failed: ${errorMessage}` });
     } finally {
       setLoading(false);
     }
@@ -300,11 +316,17 @@ export default function CustomDesignForm() {
 
   return (
     <div className="custom-page">
+      <div className="custom-breadcrumb">
+        <Link to="/home">Home</Link>
+        <span>/</span>
+        <span>Custom Studio</span>
+      </div>
+
       <header className="page-header">
         <p className="hero-kicker">PARIVA Studio</p>
         <h1>Custom Jewellery Design</h1>
         <p>Create jewellery exactly the way you imagine it.</p>
-        <p style={{ marginTop: 10, color: "#c9a44c", fontSize: "0.875rem" }}>
+        <p className="custom-step-indicator">
           Step {step} of 4
         </p>
       </header>
@@ -417,6 +439,12 @@ export default function CustomDesignForm() {
                       Next →
                     </button>
                   </div>
+
+                  {message && (
+                    <div className={`custom-inline-message custom-inline-message-${message.type}`}>
+                      {message.text}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -443,9 +471,8 @@ export default function CustomDesignForm() {
                           value={form.customJewelleryType}
                           onChange={(e) => setForm({ ...form, customJewelleryType: e.target.value })}
                           placeholder="e.g., Nose Pin, Anklet, Waist Chain, etc."
-                          className="textarea-input"
-                          style={{ minHeight: 'auto' }}
-                        />
+                          className="textarea-input custom-input-min-height"
+                          />
                         <small className="field-hint">Enter the specific type of jewellery you want to create</small>
                       </div>
                     )}
@@ -467,10 +494,10 @@ export default function CustomDesignForm() {
                             onChange={(v) => setForm({ ...form, metal: v, purity: PURITY_OPTIONS[v][0] })} 
                           />
                           {budgetValidation.recommendations.includes(form.metal) && (
-                            <small className="field-hint" style={{ color: '#16a34a' }}>✅ Budget-friendly choice</small>
+                            <small className="field-hint budget-friendly">✅ Budget-friendly choice</small>
                           )}
                           {budgetValidation.avoid.includes(form.metal) && (
-                            <small className="field-hint" style={{ color: '#dc2626' }}>⚠️ Exceeds budget</small>
+                            <small className="field-hint budget-exceeds">⚠️ Exceeds budget</small>
                           )}
                         </div>
                         <div className="field">
@@ -499,7 +526,7 @@ export default function CustomDesignForm() {
                             onChange={(v) => setForm({ ...form, stone: v })} 
                           />
                           {form.stone !== "None" && form.budgetTier?.category === "budget" && (
-                            <small className="field-hint" style={{ color: '#dc2626' }}>⚠️ May exceed budget</small>
+                            <small className="field-hint budget-exceeds">⚠️ May exceed budget</small>
                           )}
                         </div>
                         <div className="field">
@@ -610,7 +637,12 @@ export default function CustomDesignForm() {
                   <div className="form-section">
                     <h2 className="section-title">Reference Image (Optional)</h2>
                     <div className="field">
-                      <input type="file" onChange={(e) => setImage(e.target.files[0])} className="file-input" />
+                      <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} className="file-input" />
+                      {imagePreview && (
+                        <div className="custom-image-preview-wrap">
+                          <img src={imagePreview} alt="Reference preview" className="custom-image-preview" />
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -663,6 +695,14 @@ export default function CustomDesignForm() {
                         Final price will be confirmed by admin after review.
                       </div>
                     </div>
+                    {imagePreview && (
+                      <div className="review-card">
+                        <h3>Reference Image</h3>
+                        <div className="custom-image-preview-wrap">
+                          <img src={imagePreview} alt="Reference preview" className="custom-image-preview" />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-actions">
@@ -671,14 +711,10 @@ export default function CustomDesignForm() {
                     </button>
                     <button 
                       type="button" 
-                      className={`primary-btn ${loading ? 'button-loading' : ''}`} 
+                      className={`primary-btn ${loading ? 'button-loading button-disabled' : 'button-enabled'}`} 
                       disabled={loading} 
                       onClick={submit}
-                      style={{
-                        opacity: loading ? 0.7 : 1,
-                        cursor: loading ? 'not-allowed' : 'pointer'
-                      }}
-                    >
+                      >
                       {loading ? (
                         <span className="button-loading-content">
                           <span className="loading-spinner-small"></span>
@@ -703,13 +739,13 @@ export default function CustomDesignForm() {
             <div className="estimate-note">Indicative only</div>
             
             {/* Budget Status */}
-            {form.budgetRange && (
+            {form.budgetTier && (
               <div className={`budget-status ${budgetValidation.valid ? 'within-budget' : 'over-budget'}`}>
                 <div className="budget-indicator">
                   {budgetValidation.valid ? '✅ Within Budget' : '⚠️ Over Budget'}
                 </div>
                 <div className="budget-range">
-                  Your Budget: {form.budgetRange.label}
+                  Your Budget: {form.budgetTier.label}
                 </div>
               </div>
             )}
@@ -748,6 +784,51 @@ const styles = `
   min-height: 100vh;
   background: linear-gradient(135deg, #faf8f5 0%, #f5f3f0 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.custom-breadcrumb {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 0;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.custom-breadcrumb a {
+  text-decoration: none;
+}
+
+.custom-inline-message {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+
+.custom-inline-message-error {
+  background: #fff3f1;
+  border-color: #f2c5bd;
+}
+
+.custom-inline-message-success {
+  background: #eef8f0;
+  border-color: #bfdcc5;
+}
+
+.custom-image-preview-wrap {
+  margin-top: 1rem;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ece6dc;
+}
+
+.custom-image-preview {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
 }
 
 /* Header Section */
@@ -1644,10 +1725,15 @@ const styles = `
 
 // Inject styles into the document head
 if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.type = 'text/css';
-  styleSheet.innerText = styles;
-  document.head.appendChild(styleSheet);
+  const existingStyleSheet = document.getElementById("custom-design-form-styles");
+
+  if (!existingStyleSheet) {
+    const styleSheet = document.createElement('style');
+    styleSheet.id = "custom-design-form-styles";
+    styleSheet.type = 'text/css';
+    styleSheet.innerText = styles;
+    document.head.appendChild(styleSheet);
+  }
 }
 
 // import React, { useEffect, useMemo, useState } from "react";

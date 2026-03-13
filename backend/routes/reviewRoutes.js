@@ -4,7 +4,8 @@ import {
   getProductReviews,
   deleteReview,
   getAllReviews,
-  getReviewsByOrder
+  getReviewsByOrder,
+  getMyReviews
 } from "../controllers/reviewController.js";
 
 // 🔐 JWT Authentication Middleware
@@ -20,6 +21,9 @@ router.get("/product/:productId", getProductReviews);
 
 // 📋 GET REVIEWS BY ORDER - Protected route
 router.get("/order/:orderId", protect, getReviewsByOrder);
+
+// 👤 GET LOGGED-IN USER REVIEWS - Protected route
+router.get("/my", protect, getMyReviews);
 
 // 🗑️ DELETE REVIEW - Protected route (only review owner)
 router.delete("/:id", protect, deleteReview);

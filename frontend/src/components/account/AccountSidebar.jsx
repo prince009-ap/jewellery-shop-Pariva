@@ -1,10 +1,11 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import API from "../../services/api";
+import { clearUserSession } from "../../utils/authStorage";
 
 
 export default function AccountSidebar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
 const handleLogout = async () => {
   try {
@@ -13,7 +14,8 @@ const handleLogout = async () => {
     console.error("Logout failed", e);
   }
 
-  localStorage.removeItem("token");
+  logout();
+  clearUserSession();
   window.location.href = "/login"; // hard reset
 };
 

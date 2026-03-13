@@ -1,11 +1,13 @@
 import axios from "axios";
+import { getUserToken, migrateLegacyUserSession } from "../utils/authStorage";
+
+migrateLegacyUserSession();
+
+export const API_BASE_URL = "http://localhost:5000";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: `${API_BASE_URL}/api`,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 let setLoader = null;
@@ -15,19 +17,22 @@ export const registerLoader = (fn) => {
 };
 
 API.interceptors.request.use((config) => {
-   const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    // ✅ FIXED: Ensure proper content-type
-    if (config.data && !config.headers['Content-Type']) {
-      config.headers['Content-Type'] = 'application/json';
-    }
-    
+  const token = getUserToken() || sessionStorage.getItem("adminToken");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  } else if (config.data && !config.headers["Content-Type"]) {
+    config.headers["Content-Type"] = "application/json";
+  }
+
   if (!config.skipLoader && setLoader) {
     setLoader(true);
   }
+
   return config;
 });
 

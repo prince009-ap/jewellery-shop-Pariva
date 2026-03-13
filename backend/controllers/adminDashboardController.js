@@ -43,23 +43,24 @@ import Product from "../models/Product.js";
 import User from "../models/User.js";
 import { getLiveMetalRates } from "../services/metalPriceService.js";
 import Coupon from "../models/Coupon.js";
+import Order from "../models/Order.js";
 
 export const getAdminDashboardStats = async (req, res) => {
   try {
     const totalProducts = await Product.countDocuments();
     const totalUsers = await User.countDocuments();
+    const totalOrders = await Order.countDocuments();
     const lowStockProducts = await Product.find({
       stock: { $gt: 0, $lte: 5 }, // Only show low stock for products with stock > 0 and <= 5
     }).select("name stock");
-const totalCoupons = await Coupon.countDocuments();
-const activeCoupons = await Coupon.countDocuments({ isActive: true });
+    const totalCoupons = await Coupon.countDocuments();
 
     // Dates
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-const sevenDaysAgo = new Date();
-sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // include today
-sevenDaysAgo.setHours(0, 0, 0, 0); // reset time
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // include today
+    sevenDaysAgo.setHours(0, 0, 0, 0); // reset time
 
     const todayUsers = await User.countDocuments({
       createdAt: { $gte: todayStart },
@@ -77,6 +78,24 @@ sevenDaysAgo.setHours(0, 0, 0, 0); // reset time
       createdAt: { $gte: sevenDaysAgo },
     });
 
+    const totalRevenueAgg = await Order.aggregate([
+      { $match: { orderStatus: { $ne: "cancelled" } } },
+      { $group: { _id: null, total: { $sum: "$priceBreakup.totalAmount" } } },
+    ]);
+
+    const todayRevenueAgg = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: todayStart },
+          orderStatus: { $ne: "cancelled" },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$priceBreakup.totalAmount" } } },
+    ]);
+
+    const totalRevenue = Math.round((totalRevenueAgg[0]?.total || 0) * 100) / 100;
+    const todayRevenue = Math.round((todayRevenueAgg[0]?.total || 0) * 100) / 100;
+
     // 🔥 RECENT PRODUCTS (NEW)
     const recentProducts = await Product.find()
       .sort({ createdAt: -1 })
@@ -88,13 +107,13 @@ sevenDaysAgo.setHours(0, 0, 0, 0); // reset time
     res.json({
       totalProducts,
       totalUsers,
-      totalOrders: 0,
-      todayRevenue: 0,
+      totalOrders,
+      todayRevenue,
+      totalRevenue,
       goldRate: rates.gold,
       silverRate: rates.silver,
       lowStockProducts,
-       totalCoupons,
-  activeCoupons,
+      totalCoupons,
       todayUsers,
       todayProducts,
       last7DaysUsers,

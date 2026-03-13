@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
+import "./EditProduct.css";
 
 function EditProduct() {
   const { id } = useParams();
@@ -10,109 +11,225 @@ function EditProduct() {
     name: "",
     price: "",
     category: "",
-     metal: "",        // ✅ ADD
-  occasion: "",     // ✅ ADD
+    metal: "",
+    occasion: "",
     image: null,
   });
 
+  const [currentImage, setCurrentImage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
     const loadProduct = async () => {
-      const res = await adminAPI.get(`/products`);
-      const product = res.data.find((p) => p._id === id);
+      try {
+        const res = await adminAPI.get(`/products`);
+        const product = res.data.find((p) => p._id === id);
 
-      setForm({
-        name: product.name,
-        price: product.price,
-        category: product.category,
-          metal: product.metal,          // ✅ ADD
-  occasion: product.occasion,    // ✅ ADD
-        image: null,
-      });
+        if (!product) {
+          navigate("/admin/products", { replace: true });
+          return;
+        }
+
+        setForm({
+          name: product.name || "",
+          price: product.price || "",
+          category: product.category || "",
+          metal: product.metal || "",
+          occasion: product.occasion || "",
+          image: null,
+        });
+
+        setCurrentImage(product.image || "");
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadProduct();
-  }, [id]);
+  }, [id, navigate]);
+
+  const previewUrl = useMemo(() => {
+    if (form.image) return URL.createObjectURL(form.image);
+    if (currentImage) return `http://localhost:5000/uploads/${currentImage}`;
+    return "";
+  }, [form.image, currentImage]);
+
+  useEffect(() => {
+    return () => {
+      if (form.image && previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [form.image, previewUrl]);
 
   const handleChange = (e) => {
-    if (e.target.name === "image") {
-      setForm({ ...form, image: e.target.files[0] });
-    } else {
-      setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, files } = e.target;
+
+    if (name === "image") {
+      setForm((prev) => ({ ...prev, image: files?.[0] || null }));
+      return;
     }
+
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
 
     const data = new FormData();
     data.append("name", form.name);
     data.append("price", form.price);
     data.append("category", form.category);
-    data.append("metal", form.metal);        // ✅ ADD
-data.append("occasion", form.occasion);  // ✅ ADD
+    data.append("metal", form.metal);
+    data.append("occasion", form.occasion);
     if (form.image) data.append("image", form.image);
 
-    const token = localStorage.getItem("adminToken");
+    const token = sessionStorage.getItem("adminToken");
 
-    await adminAPI.put(`/admin/products/${id}`, data, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    navigate("/admin/dashboard");
+    try {
+      setSubmitting(true);
+      await adminAPI.put(`/admin/products/${id}`, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      navigate("/admin/products", { replace: true });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="page-loading-overlay">
+        <div className="page-loading-content">
+          <div className="loading-spinner loading-spinner-large"></div>
+          <div className="page-loading-text">Loading product details...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: "2rem", maxWidth: "500px" }}>
-      <h2>Edit Product</h2>
+    <div className="edit-product-page">
+      <div className="edit-product-shell">
+        <nav className="edit-product-breadcrumb">
+          <button
+            type="button"
+            className="crumb-home-btn"
+            onClick={() => navigate("/admin/dashboard", { replace: true })}
+          >
+            Home
+          </button>
+          <span>&gt;</span>
+          <button
+            type="button"
+            className="crumb-home-btn"
+            onClick={() => navigate("/admin/products", { replace: true })}
+          >
+            Products
+          </button>
+          <span>&gt;</span>
+          <span>Edit</span>
+        </nav>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          placeholder="Product Name"
-          required
-        />
+        <header className="edit-product-header">
+          <p className="edit-product-kicker">PARIVA Catalog Studio</p>
+          <h1>Edit Product</h1>
+          <p>Update details and keep your product listing fresh.</p>
+        </header>
 
-        <input
-          name="price"
-          value={form.price}
-          onChange={handleChange}
-          placeholder="Price"
-          required
-        />
+        <section className="edit-product-card">
+          <form onSubmit={handleSubmit}>
+            <div className="edit-product-grid">
+              <div className="field-group">
+                <label>Product Name *</label>
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Product Name"
+                  required
+                />
+              </div>
 
-        <input
-          name="category"
-          value={form.category}
-          onChange={handleChange}
-          placeholder="Category"
-          required
-        />
-        <input
-  name="metal"
-  value={form.metal}
-  onChange={handleChange}
-  placeholder="Metal (Gold / Silver)"
-  required
-/>
+              <div className="field-group">
+                <label>Price (Rs) *</label>
+                <input
+                  name="price"
+                  value={form.price}
+                  onChange={handleChange}
+                  type="number"
+                  placeholder="Price"
+                  required
+                />
+              </div>
 
-<input
-  name="occasion"
-  value={form.occasion}
-  onChange={handleChange}
-  placeholder="Occasion (Wedding / Daily)"
-  required
-/>
+              <div className="field-group">
+                <label>Category *</label>
+                <input
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  placeholder="Category"
+                  required
+                />
+              </div>
 
-        <input
-          type="file"
-          name="image"
-          accept="image/*"
-          onChange={handleChange}
-        />
+              <div className="field-group">
+                <label>Metal *</label>
+                <input
+                  name="metal"
+                  value={form.metal}
+                  onChange={handleChange}
+                  placeholder="Metal"
+                  required
+                />
+              </div>
 
-        <button type="submit">Update Product</button>
-      </form>
+              <div className="field-group full-span">
+                <label>Occasion *</label>
+                <input
+                  name="occasion"
+                  value={form.occasion}
+                  onChange={handleChange}
+                  placeholder="Occasion"
+                  required
+                />
+              </div>
+
+              <div className="field-group full-span">
+                <label>Product Image (optional)</label>
+                <input type="file" name="image" accept="image/*" onChange={handleChange} />
+
+                {previewUrl ? (
+                  <div className="preview-wrap">
+                    <img src={previewUrl} alt="Product preview" />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="edit-product-actions">
+              <button
+                type="button"
+                className="product-pill-btn"
+                onClick={() => navigate("/admin/products", { replace: true })}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className={submitting ? "product-pill-btn submit-btn button-loading" : "product-pill-btn submit-btn"}
+              >
+                {submitting ? "Updating..." : "Update Product"}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
     </div>
   );
 }

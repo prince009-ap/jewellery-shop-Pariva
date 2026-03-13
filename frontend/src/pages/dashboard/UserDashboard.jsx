@@ -8,13 +8,13 @@ export default function UserDashboard() {
   const { user, logout } = useAuth();
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div className="user-dashboard-container">
       <h2>Welcome, {user?.name}</h2>
       <p>Email: {user?.email}</p>
       <p>Gender: {user?.gender}</p>
       <p>DOB: {new Date(user?.dob).toLocaleDateString()}</p>
 
-      <button onClick={logout}>Logout</button>
+      <button onClick={logout} className="logout-btn">Logout</button>
     </div>
   );
 }

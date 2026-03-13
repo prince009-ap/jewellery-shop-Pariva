@@ -1,50 +1,3 @@
-
-// import { useState } from "react";
-// import MapModal from "../../components/address/MapModal";
-
-// export default function Addresses() {
-//   const [showMap, setShowMap] = useState(false);
-//   const [address, setAddress] = useState("");
-//   const [city, setCity] = useState("");
-//   const [pincode, setPincode] = useState("");
-
-//   return (
-//     <div className="address-wrapper">
-//       <h2>Delivery Address</h2>
-
-//       <button
-//         className="map-btn"
-//         onClick={() => setShowMap(true)}
-//       >
-//         📍 Select from Map
-//       </button>
-
-//       <input value={address} placeholder="Address" />
-//       <input value={city} placeholder="City" />
-//       <input value={pincode} placeholder="Pincode" />
-
-//       <button className="save-btn">Save Address</button>
-
-//       {showMap && (
-//         <MapModal
-//           onClose={() => setShowMap(false)}
-//           onSelect={(data) => {
-//             setAddress(data.display_name || "");
-//             setCity(
-//               data.address.city ||
-//               data.address.town ||
-//               data.address.village ||
-//               ""
-//             );
-//             setPincode(data.address.postcode || "");
-//             setShowMap(false);
-//           }}
-//         />
-//       )}
-//     </div>
-//   );
-// }
-
 import { useEffect, useState } from "react";
 import API from "../../services/api";
 import AddressForm from "../../components/address/AddressForm";
@@ -55,78 +8,88 @@ export default function Addresses() {
   const [geoData, setGeoData] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [addresses, setAddresses] = useState([]);
+  const [formMessage, setFormMessage] = useState("");
+  const [formMessageType, setFormMessageType] = useState("info");
+  const [form, setForm] = useState({
+    label: "Home",
+    name: "",
+    phone: "",
+    house: "",
+    floor: "",
+    area: "",
+    landmark: "",
+    city: "",
+    state: "",
+    pincode: "",
+    lat: null,
+    lng: null,
+  });
 
-const [form, setForm] = useState({
-  label: "Home",
-  name: "",
-  phone: "",
-  house: "",
-  floor: "",
-  area: "",
-  landmark: "",
-  city: "",
-  state: "",
-  pincode: "",
-  lat: null,
-  lng: null,
-});
+  const resetForm = () => {
+    setForm({
+      label: "Home",
+      name: "",
+      phone: "",
+      house: "",
+      floor: "",
+      area: "",
+      landmark: "",
+      city: "",
+      state: "",
+      pincode: "",
+      lat: null,
+      lng: null,
+    });
+    setGeoData(null);
+  };
 
-  /* 🔁 LOAD ADDRESSES */
   const loadAddresses = async () => {
     const res = await API.get("/address");
     setAddresses(res.data);
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadAddresses();
-    
   }, []);
 
-  /* ✏️ EDIT */
   const startEdit = (addr) => {
     setEditingId(addr._id);
     setForm(addr);
+    setFormMessage("");
   };
 
-  /* 💾 SAVE (ADD + UPDATE) */
   const saveAddress = async () => {
-  if (!form.name || !form.phone|| !form.state || !form.house) {
-  alert("Please fill all required fields");
-  return;
-}
+    if (!form.name || !form.phone || !form.state || !form.house) {
+      setFormMessage("Please fill all required fields.");
+      setFormMessageType("error");
+      return;
+    }
 
     try {
       if (editingId) {
-        await API.put(`/address/${editingId}`, form); // UPDATE
+        await API.put(`/address/${editingId}`, form);
       } else {
-        await API.post("/address", form); // ADD
+        await API.post("/address", form);
       }
 
       setEditingId(null);
-      setForm({
-     label: "Home",
-  name: "",
-  phone: "",
-  house: "",
-  floor: "",
-  area: "",
-  landmark: "",
-  city: "",
-  state: "",
-  pincode: "",
-  lat: null,
-  lng: null,
-      });
-
+      resetForm();
+      setFormMessage("Address saved successfully.");
+      setFormMessageType("success");
       loadAddresses();
     } catch (err) {
       console.error("Save address error:", err.response?.data || err.message);
-      alert("Save failed ❌");
+      setFormMessage("Save failed. Please try again.");
+      setFormMessageType("error");
     }
   };
 
-  /* 🗑 DELETE */
+  const clearForm = () => {
+    setEditingId(null);
+    resetForm();
+    setFormMessage("");
+  };
+
   const deleteAddress = async (id) => {
     if (!window.confirm("Delete this address?")) return;
     await API.delete(`/address/${id}`);
@@ -135,15 +98,30 @@ const [form, setForm] = useState({
 
   return (
     <div className="address-page">
-      <button className="use-map-btn" onClick={() => setShowMap(true)}>
-        📍 Use map to select location
-      </button>
+      <div className="address-form-shell">
+        <button className="use-map-btn" onClick={() => setShowMap(true)}>
+          Use map to select location
+        </button>
 
-      <AddressForm geoData={geoData} form={form} setForm={setForm} />
+        <div className="address-form-panel">
+          <AddressForm geoData={geoData} form={form} setForm={setForm} />
+        </div>
 
-      <button className="save-btn" onClick={saveAddress}>
-        {editingId ? "Update Address" : "Save Address"}
-      </button>
+        {formMessage ? (
+          <div className={`address-inline-message ${formMessageType}`}>
+            {formMessage}
+          </div>
+        ) : null}
+
+        <div className="address-form-actions">
+          <button className="save-btn address-save-btn" onClick={saveAddress}>
+            {editingId ? "Update Address" : "Save Address"}
+          </button>
+          <button type="button" className="use-map-btn address-clear-btn" onClick={clearForm}>
+            Clear
+          </button>
+        </div>
+      </div>
 
       <div className="saved-address-list">
         {addresses.map((addr) => (
@@ -153,11 +131,11 @@ const [form, setForm] = useState({
             <small>{addr.city} - {addr.pincode}</small>
             <p>{addr.state}</p>
             <p>{addr.name}</p>
-            <p>📞 {addr.phone}</p>
-        
+            <p>{addr.phone}</p>
+
             <div className="addr-actions">
-              <button onClick={() => startEdit(addr)}>✏️ Edit</button>
-              <button onClick={() => deleteAddress(addr._id)}>🗑 Delete</button>
+              <button type="button" onClick={() => startEdit(addr)}>Edit</button>
+              <button type="button" onClick={() => deleteAddress(addr._id)}>Delete</button>
             </div>
           </div>
         ))}
@@ -168,6 +146,7 @@ const [form, setForm] = useState({
           onClose={() => setShowMap(false)}
           onSelect={(data) => {
             setGeoData(data);
+            setFormMessage("");
             setShowMap(false);
           }}
         />

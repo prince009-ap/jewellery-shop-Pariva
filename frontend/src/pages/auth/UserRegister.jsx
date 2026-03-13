@@ -22,7 +22,16 @@ function UserRegister() {
     e.preventDefault();
     setError("");
     try {
-      await API.post("/auth/register", form);
+      const payload = {
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password.trim(),
+        mobile: form.mobile.trim(),
+        dob: form.dob,
+        gender: form.gender,
+      };
+
+      await API.post("/auth/register", payload);
       navigate("/login" , { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");

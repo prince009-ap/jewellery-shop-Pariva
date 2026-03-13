@@ -1,7 +1,16 @@
 import { createContext, useContext, useReducer, useEffect } from "react";
-import axios from "axios";
+import API from "../services/api";
+import {
+  clearUserSession,
+  getStoredUser,
+  getUserToken,
+  migrateLegacyUserSession,
+  setUserSession,
+} from "../utils/authStorage";
 
 const AuthContext = createContext();
+migrateLegacyUserSession();
+const storedUser = getStoredUser();
 
 const authReducer = (state, action) => {
   switch (action.type) {
@@ -41,36 +50,40 @@ const authReducer = (state, action) => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const storedToken = getUserToken();
+
   const [state, dispatch] = useReducer(authReducer, {
-    isAuthenticated: false,
-    user: null,
-    token: localStorage.getItem("token"),
+    isAuthenticated: Boolean(storedToken && storedUser),
+    user: storedUser,
+    token: storedToken,
     loading: true,
     error: null,
   });
 
-  // Set axios default header
   useEffect(() => {
     if (state.token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${state.token}`;
-      localStorage.setItem("token", state.token);
+      setUserSession(state.user, state.token);
     } else {
-      delete axios.defaults.headers.common["Authorization"];
-      localStorage.removeItem("token");
+      clearUserSession();
     }
-  }, [state.token]);
+  }, [state.token, state.user]);
 
   // Load user on app start
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem("token");
+      const token = getUserToken();
       if (token) {
         try {
-          const response = await axios.get("/api/auth/me");
+          const response = await API.get("/auth/me", { skipLoader: true });
+          const userPayload = response.data?.user || response.data;
+          const safeUser =
+            userPayload && typeof userPayload === "object"
+              ? userPayload
+              : storedUser;
           dispatch({
             type: "LOGIN_SUCCESS",
             payload: {
-              user: response.data.user,
+              user: safeUser,
               token: token,
             },
           });
@@ -106,7 +119,7 @@ export const AuthProvider = ({ children }) => {
         return { user: emailOrUser, token: passwordOrToken };
       }
 
-      const response = await axios.post("/api/auth/login", {
+      const response = await API.post("/auth/login", {
         email: String(emailOrUser || "").trim().toLowerCase(),
         password: passwordOrToken,
       });
@@ -132,7 +145,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
-      const response = await axios.post("/api/auth/register", userData);
+      const response = await API.post("/auth/register", userData);
       
       dispatch({
         type: "LOGIN_SUCCESS",
@@ -154,6 +167,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     dispatch({ type: "LOGOUT" });
+    clearUserSession();
   };
 
   const value = {

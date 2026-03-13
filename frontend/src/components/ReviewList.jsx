@@ -1,194 +1,100 @@
-import React from 'react';
-import StarRating from './StarRating.jsx';
+import { useState } from "react";
+import StarRating from "./StarRating.jsx";
+import "./ReviewList.css";
 
-const ReviewList = ({ reviews, loading = false }) => {
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+export default function ReviewList({ reviews, loading = false }) {
+  const [helpfulMap, setHelpfulMap] = useState({});
+  const [reportedMap, setReportedMap] = useState({});
+
+  const formatDate = (dateString) =>
+    new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
-  };
 
   if (loading) {
-    return (
-      <div style={{ 
-        padding: '20px', 
-        textAlign: 'center',
-        color: '#666'
-      }}>
-        Loading reviews...
-      </div>
-    );
+    return <div className="review-list-loading">Loading reviews...</div>;
   }
 
   if (!reviews || reviews.length === 0) {
     return (
-      <div style={{ 
-        padding: '20px', 
-        textAlign: 'center',
-        color: '#666',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px',
-        border: '1px solid #e9ecef'
-      }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⭐</div>
-        <p style={{ margin: '0', fontSize: '16px' }}>
-          No reviews yet
-        </p>
-        <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#666' }}>
-          Be the first to share your experience with this product!
-        </p>
+      <div className="review-list-empty">
+        <div className="review-list-empty-icon">Star</div>
+        <h3>No reviews yet</h3>
+        <p>Be the first to share your experience with this product.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px 0' }}>
-      <h3 style={{ 
-        margin: '0 0 20px 0', 
-        color: '#333',
-        fontSize: '20px',
-        fontWeight: '600'
-      }}>
-        Customer Reviews ({reviews.length})
-      </h3>
-      
-      {reviews.map((review) => (
-        <div 
-          key={review._id}
-          style={{
-            backgroundColor: '#fff',
-            border: '1px solid #e9ecef',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-        >
-          {/* Review Header */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#666',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}>
-                {review.userId?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-              <div>
-                <div style={{
-                  fontWeight: '600',
-                  color: '#333',
-                  fontSize: '16px',
-                  marginBottom: '2px'
-                }}>
-                  {review.userId?.name || 'Anonymous User'}
-                </div>
-                <div style={{
-                  fontSize: '12px',
-                  color: '#666'
-                }}>
-                  {review.userId?.email || ''}
-                </div>
-              </div>
-            </div>
-            
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                {formatDate(review.createdAt)}
-              </div>
-              <StarRating 
-                value={review.rating} 
-                readonly={true} 
-                size="small"
-              />
-            </div>
-          </div>
-
-          {/* Review Comment */}
-          <div style={{
-            backgroundColor: '#f8f9fa',
-            padding: '12px',
-            borderRadius: '6px',
-            borderLeft: '3px solid #007bff',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            color: '#333'
-          }}>
-            {review.comment}
-          </div>
-
-          {/* Review Actions */}
-          <div style={{
-            marginTop: '12px',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '8px'
-          }}>
-            <button
-              style={{
-                padding: '6px 12px',
-                border: '1px solid #007bff',
-                backgroundColor: '#fff',
-                color: '#007bff',
-                borderRadius: '4px',
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#007bff';
-                e.target.style.color = '#fff';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#fff';
-                e.target.style.color = '#007bff';
-              }}
-            >
-              👍 Helpful ({review.helpful || 0})
-            </button>
-            <button
-              style={{
-                padding: '6px 12px',
-                border: '1px solid #dc3545',
-                backgroundColor: '#fff',
-                color: '#dc3545',
-                borderRadius: '4px',
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#dc3545';
-                e.target.style.color = '#fff';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#fff';
-                e.target.style.color = '#dc3545';
-              }}
-            >
-              🚩 Report
-            </button>
-          </div>
+    <section className="review-list">
+      <div className="review-list-head">
+        <div>
+          <p className="review-list-kicker">Real Customer Feedback</p>
+          <h3>Customer Reviews ({reviews.length})</h3>
         </div>
-      ))}
-    </div>
-  );
-};
+      </div>
 
-export default ReviewList;
+      <div className="review-list-grid">
+        {reviews.map((review) => {
+          const helpfulCount = review.helpful || 0;
+          const liked = Boolean(helpfulMap[review._id]);
+          const reported = Boolean(reportedMap[review._id]);
+
+          return (
+            <article key={review._id} className="review-card">
+              <div className="review-card-head">
+                <div className="review-author">
+                  <div className="review-avatar">
+                    {review.userId?.name?.charAt(0)?.toUpperCase() || "U"}
+                  </div>
+
+                  <div>
+                    <strong>{review.userId?.name || "Anonymous User"}</strong>
+                    <span>{review.userId?.email || "Verified customer"}</span>
+                  </div>
+                </div>
+
+                <div className="review-meta">
+                  <span>{formatDate(review.createdAt)}</span>
+                  <StarRating value={review.rating} readonly={true} size="small" />
+                </div>
+              </div>
+
+              <div className="review-comment">{review.comment}</div>
+
+              <div className="review-actions">
+                <button
+                  type="button"
+                  className={`review-action-btn ${liked ? "active" : ""}`}
+                  onClick={() =>
+                    setHelpfulMap((prev) => ({
+                      ...prev,
+                      [review._id]: !prev[review._id],
+                    }))
+                  }
+                >
+                  Helpful ({liked ? helpfulCount + 1 : helpfulCount})
+                </button>
+
+                <button
+                  type="button"
+                  className={`review-action-btn report ${reported ? "reported" : ""}`}
+                  onClick={() =>
+                    setReportedMap((prev) => ({
+                      ...prev,
+                      [review._id]: !prev[review._id],
+                    }))
+                  }
+                >
+                  {reported ? "Reported" : "Report"}
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

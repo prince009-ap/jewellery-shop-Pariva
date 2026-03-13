@@ -17,7 +17,8 @@ function AdminLogin() {
 const { admin } = useAdminAuth();
 
 useEffect(() => {
-  if (admin) {
+  const hasToken = Boolean(sessionStorage.getItem("adminToken"));
+  if (admin || hasToken) {
     navigate("/admin/dashboard", { replace: true });
   }
 
@@ -54,7 +55,7 @@ useEffect(() => {
         emailOtp,
       });
 
-      localStorage.setItem("adminToken", res.data.token);
+        sessionStorage.setItem("adminToken", res.data.token);
       setAdmin(res.data.admin);
       navigate("/admin/dashboard", { replace: true });
     } catch (err) {
@@ -138,6 +139,23 @@ useEffect(() => {
             </button>
           </form>
         )}
+
+        <div style={{ marginTop: 16, textAlign: "center" }}>
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#1f2937",
+              textDecoration: "underline",
+              cursor: "pointer",
+              fontSize: "0.95rem",
+            }}
+          >
+            Login as User
+          </button>
+        </div>
       </div>
     </div>
   );

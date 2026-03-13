@@ -10,7 +10,7 @@ export const AdminAuthProvider = ({ children }) => {
 
   useEffect(() => {
     const loadAdmin = async () => {
-      const token = localStorage.getItem("adminToken");
+      const token = sessionStorage.getItem("adminToken");
 
       if (!token) {
         setLoading(false);
@@ -25,7 +25,7 @@ export const AdminAuthProvider = ({ children }) => {
         setAdmin(res.data.admin || res.data);
       } catch (err) {
         console.error("Failed to load admin:", err);
-        localStorage.removeItem("adminToken");
+        sessionStorage.removeItem("adminToken");
         setAdmin(null);
       } finally {
         setLoading(false);

@@ -29,7 +29,7 @@ const productSchema = new mongoose.Schema(
     isFeatured: { type: Boolean, default: false },
     isTrending: { type: Boolean, default: false },
     isRecommended: { type: Boolean, default: false },
-    isNew: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false },
     
     // Stock and availability
     stock: {

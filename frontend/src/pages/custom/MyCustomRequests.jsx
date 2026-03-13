@@ -20,64 +20,35 @@ export default function MyCustomRequests() {
     }
   };
 
-  const getStatusStyle = (status) => {
-    switch (status?.toLowerCase()) {
-      case "approved":
-        return { background: "#16a34a", color: "white" };
-      case "rejected":
-        return { background: "#dc2626", color: "white" };
-      case "pending":
-      default:
-        return { background: "#f59e0b", color: "white" };
-    }
-  };
-
-  if (loading) return <h3 style={{ padding: 40 }}>Loading...</h3>;
+  if (loading) return <h3 className="my-custom-requests-loading">Loading...</h3>;
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 1200, margin: "auto" }}>
-      <h2 style={{ marginBottom: 30 }}>My Custom Designs</h2>
+    <div className="my-custom-requests-container">
+      <h2 className="my-custom-requests-title">My Custom Designs</h2>
 
       {list.length === 0 && <p>No custom requests yet.</p>}
 
       {list.map((d) => (
         <div
           key={d._id}
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 30,
-            background: "white",
-            boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
-          }}
+          className="my-custom-requests-card"
         >
           {/* HEADER */}
           <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 15,
-            }}
+            className="my-custom-requests-header"
           >
             <h3>
               {d.jewelleryType}
             </h3>
 
             <span
-              style={{
-                padding: "6px 14px",
-                borderRadius: 30,
-                fontSize: 12,
-                fontWeight: 600,
-                ...getStatusStyle(d.status),
-              }}
+              className={`my-custom-requests-status status-${d.status?.toLowerCase() || 'pending'}`}
             >
               {d.status}
             </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "250px 1fr", gap: 20 }}>
+          <div className="my-custom-requests-grid">
             
             {/* IMAGE */}
             <div>
@@ -85,23 +56,11 @@ export default function MyCustomRequests() {
                 <img
                   src={`http://localhost:5000/uploads/${d.referenceImage}`}
                   alt="custom"
-                  style={{
-                    width: "100%",
-                    borderRadius: 12,
-                    objectFit: "cover",
-                  }}
+                  className="my-custom-requests-image"
                 />
               ) : (
                 <div
-                  style={{
-                    height: 200,
-                    background: "#f3f4f6",
-                    borderRadius: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#9ca3af",
-                  }}
+                  className="my-custom-requests-no-image"
                 >
                   No Image
                 </div>
@@ -132,21 +91,16 @@ export default function MyCustomRequests() {
               )}
 
               {d.description && (
-                <div style={{ marginTop: 10 }}>
+                <div className="my-custom-requests-description-container">
                   <strong>Description:</strong>
-                  <p style={{ color: "#555" }}>{d.description}</p>
+                  <p className="my-custom-requests-description">{d.description}</p>
                 </div>
               )}
 
               {/* ADMIN RESPONSE */}
               {d.status === "approved" && (
                 <div
-                  style={{
-                    marginTop: 15,
-                    padding: 15,
-                    background: "#f0fdf4",
-                    borderRadius: 10,
-                  }}
+                  className="my-custom-requests-approved-response"
                 >
                   <p><strong>Final Weight:</strong> {d.finalWeight} g</p>
                   <p><strong>Final Price:</strong> ₹{d.finalPrice}</p>
@@ -155,13 +109,7 @@ export default function MyCustomRequests() {
 
               {d.status === "rejected" && (
                 <div
-                  style={{
-                    marginTop: 15,
-                    padding: 15,
-                    background: "#fef2f2",
-                    borderRadius: 10,
-                    color: "#dc2626",
-                  }}
+                  className="my-custom-requests-rejected-response"
                 >
                   <strong>Rejection Reason:</strong>
                   <p>{d.rejectReason}</p>

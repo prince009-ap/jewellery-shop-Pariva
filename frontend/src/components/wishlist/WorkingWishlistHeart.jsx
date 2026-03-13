@@ -111,6 +111,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import API from "../../services/api";
+import { getUserToken } from "../../utils/authStorage";
 
 export default function WorkingWishlistHeart({ product }) {
   const [isInWishlist, setIsInWishlist] = useState(false);
@@ -118,8 +119,8 @@ export default function WorkingWishlistHeart({ product }) {
 
   const checkWishlistStatus = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token || !product?._id) {
+      const activeToken = getUserToken();
+      if (!activeToken || !product?._id) {
         setIsInWishlist(false);
         return;
       }
@@ -145,7 +146,7 @@ export default function WorkingWishlistHeart({ product }) {
   const toggleWishlist = async (e) => {
     e.stopPropagation();
 
-    const token = localStorage.getItem("token");
+    const token = getUserToken();
     if (!token) {
       alert("Please login first");
       return;

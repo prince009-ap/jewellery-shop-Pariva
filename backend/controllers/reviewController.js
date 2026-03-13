@@ -15,11 +15,24 @@ const sanitizeComment = (comment) => {
     .trim();
 };
 
+const normalizeObjectId = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (value instanceof mongoose.Types.ObjectId) return value.toString();
+  if (typeof value === "object") {
+    if (value._id) return normalizeObjectId(value._id);
+    if (value.id) return normalizeObjectId(value.id);
+  }
+  return String(value);
+};
+
 // 📝 CREATE REVIEW - Main business logic
 export const createReview = async (req, res) => {
   try {
     const { productId, orderId, rating, comment } = req.body;
     const userId = req.user?.id;
+    const normalizedProductId = normalizeObjectId(productId);
+    const normalizedOrderId = normalizeObjectId(orderId);
 
     console.log("📝 Review submission:", { userId, productId, orderId, rating, comment });
 
@@ -55,7 +68,7 @@ export const createReview = async (req, res) => {
     }
 
     // 🔍 VALIDATION 4: Check if product exists
-    const product = await Product.findById(productId);
+    const product = await Product.findById(normalizedProductId);
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -65,7 +78,7 @@ export const createReview = async (req, res) => {
 
     // 🔍 VALIDATION 5: Check if order exists and belongs to user
     const order = await Order.findOne({ 
-      _id: orderId, 
+      _id: normalizedOrderId, 
       user: userId 
     }).populate('items.product');
 
@@ -93,8 +106,8 @@ export const createReview = async (req, res) => {
     }
 // 🔍 VALIDATION 8: Check if product exists in this order
 const productInOrder = order.items.some(item => {
-  const itemProductId = item.product?._id || item.product;
-  return itemProductId.toString() === productId.toString();
+  const itemProductId = normalizeObjectId(item.product);
+  return itemProductId === normalizedProductId;
 });
 
     if (!productInOrder) {
@@ -107,8 +120,8 @@ const productInOrder = order.items.some(item => {
     // 🔍 VALIDATION 9: Check for duplicate review
     const existingReview = await Review.findOne({
       userId,
-      productId,
-      orderId
+      productId: normalizedProductId,
+      orderId: normalizedOrderId
     });
 
     if (existingReview) {
@@ -123,8 +136,8 @@ const productInOrder = order.items.some(item => {
     
     const review = await Review.create({
       userId,
-      productId,
-      orderId,
+      productId: normalizedProductId,
+      orderId: normalizedOrderId,
       rating: parseInt(rating),
       comment: sanitizedComment
     });
@@ -234,8 +247,8 @@ export const deleteReview = async (req, res) => {
       });
     }
 
-    // Check if user owns this review
-    if (review.userId.toString() !== userId) {
+    // Allow deletion if user is owner OR admin
+    if (review.userId.toString() !== userId && req.user?.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "You can only delete your own reviews."
@@ -275,7 +288,7 @@ export const getAllReviews = async (req, res) => {
 
     const reviews = await Review.find(query)
       .populate('userId', 'name email')
-      .populate('productId', 'name')
+      .populate('productId', 'name image')
       .populate('orderId', 'orderStatus')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -339,6 +352,36 @@ export const getReviewsByOrder = async (req, res) => {
       success: false,
       message: "Failed to fetch reviews.",
       error: error.message
+    });
+  }
+};
+
+export const getMyReviews = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+    }
+
+    const reviews = await Review.find({ userId })
+      .populate("productId", "name image category")
+      .populate("orderId", "orderStatus createdAt")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: reviews,
+    });
+  } catch (error) {
+    console.error("Get my reviews error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch your reviews.",
+      error: error.message,
     });
   }
 };

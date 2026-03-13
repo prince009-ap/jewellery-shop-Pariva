@@ -1,0 +1,443 @@
+/* ================= ADMIN SIDEBAR ================= */
+
+:root {
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 80px;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e5e7eb;
+  --menu-text: #374151;
+  --menu-text-hover: #111827;
+  --menu-bg-hover: #f3f4f6;
+  --menu-active-bg: #f0fdf4;
+  --menu-active-text: #059669;
+  --menu-active-indicator: #10b981;
+  --sidebar-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --transition-speed: 0.3s;
+}
+
+/* ================= SIDEBAR CONTAINER ================= */
+
+.admin-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-speed) ease;
+  z-index: 40;
+  box-shadow: var(--sidebar-shadow);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.admin-sidebar.collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+/* Hide scrollbar but keep scrolling functionality */
+.admin-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ================= SIDEBAR HEADER ================= */
+
+.admin-sidebar-header {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid var(--sidebar-border);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.admin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+}
+
+.admin-brand-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-brand-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #1f2937;
+}
+
+.admin-sidebar.collapsed .admin-brand-icon {
+  margin: 0 auto;
+}
+
+/* ================= SIDEBAR MENU ================= */
+
+.admin-sidebar-menu {
+  flex: 1;
+  padding: 1rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.admin-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  color: var(--menu-text);
+  text-decoration: none;
+  transition: all var(--transition-speed) ease;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  position: relative;
+  white-space: nowrap;
+}
+
+.admin-menu-item:hover {
+  background: var(--menu-bg-hover);
+  color: var(--menu-text-hover);
+  transform: translateX(2px);
+}
+
+.admin-menu-item.active {
+  background: var(--menu-active-bg);
+  color: var(--menu-active-text);
+  font-weight: 600;
+}
+
+.admin-menu-item.active .admin-menu-icon {
+  color: var(--menu-active-text);
+}
+
+/* Menu Icon */
+.admin-menu-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: all var(--transition-speed) ease;
+}
+
+.admin-menu-item:hover .admin-menu-icon {
+  transform: scale(1.1);
+}
+
+/* Menu Label */
+.admin-menu-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Active Indicator */
+.admin-menu-indicator {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background: var(--menu-active-indicator);
+  border-radius: 4px 0 0 4px;
+  opacity: 0;
+  transition: opacity var(--transition-speed) ease;
+}
+
+.admin-menu-item.active .admin-menu-indicator {
+  opacity: 1;
+}
+
+/* ================= SIDEBAR FOOTER ================= */
+
+.admin-sidebar-footer {
+  padding: 1rem 0.5rem;
+  border-top: 1px solid var(--sidebar-border);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.admin-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fee8f0 0%, #fce7ea 100%);
+  color: #be185d;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+}
+
+.admin-logout-btn:hover {
+  background: linear-gradient(135deg, #fbd5e8 0%, #f9c7dd 100%);
+  color: #9a1b4e;
+  transform: translateX(2px);
+}
+
+/* ================= TOGGLE BUTTONS ================= */
+
+/* Desktop Collapse Button */
+.admin-sidebar-collapse-btn {
+  position: fixed;
+  left: calc(var(--sidebar-width) - 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 56px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 0 8px 8px 0;
+  color: #6b7280;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.admin-sidebar-collapse-btn:hover {
+  background: var(--menu-bg-hover);
+  color: var(--menu-text);
+}
+
+.admin-sidebar.collapsed ~ .admin-sidebar-collapse-btn {
+  left: calc(var(--sidebar-width-collapsed) - 12px);
+}
+
+/* Mobile Toggle Button */
+.admin-sidebar-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 44px;
+  height: 44px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  color: #374151;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-speed) ease;
+}
+
+.admin-sidebar-toggle:hover {
+  background: var(--menu-bg-hover);
+}
+
+/* Mobile Backdrop */
+.admin-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 35;
+  display: none;
+}
+
+/* ================= RESPONSIVE DESIGN ================= */
+
+/* Tablet (768px - 1023px) */
+@media (max-width: 1023px) {
+  :root {
+    --sidebar-width: 240px;
+  }
+
+  .admin-sidebar-collapse-btn {
+    display: none;
+  }
+
+  .admin-sidebar {
+    width: var(--sidebar-width-collapsed);
+  }
+
+  .admin-sidebar.open {
+    width: var(--sidebar-width);
+  }
+
+  .admin-menu-item {
+    justify-content: center;
+  }
+
+  .admin-menu-item .admin-menu-label {
+    display: none;
+  }
+
+  .admin-sidebar.open .admin-menu-item {
+    justify-content: flex-start;
+  }
+
+  .admin-sidebar.open .admin-menu-label {
+    display: block;
+  }
+
+  .admin-sidebar-header {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .admin-sidebar.collapsed .admin-sidebar-header {
+    padding: 1rem;
+  }
+
+  .admin-sidebar.open .admin-sidebar-header {
+    padding: 1.5rem 1rem;
+  }
+
+  .admin-logout-btn {
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  .admin-sidebar.open .admin-logout-btn {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  :root {
+    --sidebar-width: 280px;
+    --sidebar-width-collapsed: 0;
+  }
+
+  .admin-sidebar-toggle {
+    display: flex;
+  }
+
+  .admin-sidebar {
+    width: 0;
+    transform: translateX(-100%);
+    transition: all var(--transition-speed) ease;
+  }
+
+  .admin-sidebar.mobile-open {
+    width: var(--sidebar-width);
+    transform: translateX(0);
+  }
+
+  .admin-sidebar-backdrop {
+    display: block;
+  }
+
+  .admin-sidebar-collapse-btn {
+    display: none;
+  }
+
+  .admin-menu-item {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .admin-menu-item .admin-menu-label {
+    display: block;
+  }
+
+  .admin-menu-item .admin-menu-indicator {
+    height: 28px;
+  }
+
+  .admin-sidebar-header {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .admin-logout-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+  }
+
+  .admin-sidebar-menu {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .admin-sidebar-footer {
+    padding: 1rem 0.75rem;
+  }
+}
+
+/* Extra small (< 480px) */
+@media (max-width: 479px) {
+  :root {
+    --sidebar-width: 100vw;
+  }
+
+  .admin-sidebar.mobile-open {
+    width: 100vw;
+  }
+
+  .admin-sidebar-toggle {
+    right: 0.75rem;
+    top: 0.75rem;
+    width: 40px;
+    height: 40px;
+  }
+
+  .admin-sidebar-header {
+    padding: 1.25rem 1rem;
+  }
+
+  .admin-brand-text {
+    font-size: 1rem;
+  }
+
+  .admin-menu-item {
+    padding: 0.875rem;
+    gap: 0.75rem;
+  }
+}
+
+/* ================= CONTENT ADJUSTMENT ================= */
+
+/* Main content area should shift based on sidebar */
+.admin-main-content {
+  margin-left: var(--sidebar-width);
+  transition: all var(--transition-speed) ease;
+}
+
+.admin-main-content.sidebar-collapsed {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
+@media (max-width: 1023px) {
+  .admin-main-content {
+    margin-left: 0;
+  }
+}

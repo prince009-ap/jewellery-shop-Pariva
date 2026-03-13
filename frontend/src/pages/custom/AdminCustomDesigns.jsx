@@ -1,68 +1,182 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
 import DesignModal from "./DesignModal";
+import "./AdminCustomDesigns.css";
 
 
 export default function AdminCustomDesigns() {
+  const navigate = useNavigate();
+  const toastTimerRef = useRef(null);
+
   const [list, setList] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const [sortBy, setSortBy] = useState("latest");
 
-  const load = async () => {
-    const res = await adminAPI.get("/admin/custom-design");
-    setList(res.data);
-  };
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ open: true, message, type });
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast({ open: false, message: "", type: "success" });
+    }, 2400);
+  }, []);
 
-  useEffect(() => {
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const res = await adminAPI.get("/admin/custom-design");
       setList(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      showToast("Failed to load requests", "error");
+    } finally {
+      setLoading(false);
     }
+  }, [showToast]);
+
+  useEffect(() => {
+    load();
+    return () => {
+      window.clearTimeout(toastTimerRef.current);
+    };
+  }, [load]);
+
+  const getStatusPillClass = (status) => {
+    const normalized = (status || "").toLowerCase();
+    if (normalized === "approved") return "approved";
+    if (normalized === "rejected") return "rejected";
+    return "pending";
   };
 
-  load();
-}, []);
+  const sortedList = useMemo(() => {
+    const arr = [...list];
 
+    switch (sortBy) {
+      case "oldest":
+        arr.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        break;
+      case "status":
+        arr.sort((a, b) => (a.status || "").localeCompare(b.status || ""));
+        break;
+      case "jewellery":
+        arr.sort((a, b) => (a.jewelleryType || "").localeCompare(b.jewelleryType || ""));
+        break;
+      case "latest":
+      default:
+        arr.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        break;
+    }
+
+    return arr;
+  }, [list, sortBy]);
+
+  if (loading) {
+    return (
+      <div className="page-loading-overlay">
+        <div className="page-loading-content">
+          <div className="loading-spinner loading-spinner-large"></div>
+          <div className="page-loading-text">Loading custom requests...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 30 }}>
-      <h2>Custom Design Requests</h2>
-
-      <table width="100%" border="1" cellPadding="10">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Jewellery</th>
-            <th>Metal</th>
-            <th>Status</th>
-            <th>View</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.map(d => (
-            <tr key={d._id}>
-  <td>{d.userId?.email}</td>
-  <td>{d.jewelleryType}</td>
-  <td>{d.metalType}</td>
-  <td>{d.status}</td>
-  <td>
-    <button onClick={() => setSelected(d)}>Open</button>
-  </td>
-</tr>
-
-          ))}
-        </tbody>
-      </table>
-
-      {selected && (
-        <DesignModal
-          design={selected}
-          onClose={() => setSelected(null)}
-          onUpdate={load}
-        />
+    <div className="admin-custom-designs-page">
+      {toast.open && (
+        <div className={`acd-toast acd-toast-${toast.type}`} role="status" aria-live="polite">
+          {toast.message}
+        </div>
       )}
+
+      <div className="acd-shell">
+        <nav className="acd-breadcrumb">
+          <button
+            type="button"
+            className="acd-crumb-btn"
+            onClick={() => navigate("/admin/dashboard", { replace: true })}
+          >
+            Home
+          </button>
+          <span>&gt;</span>
+          <span>Custom Requests</span>
+        </nav>
+
+        <header className="acd-header">
+          <div>
+            <p className="acd-kicker">PARIVA Custom Studio</p>
+            <h1>Custom Design Requests</h1>
+            <p>Review and approve bespoke jewellery requests from users.</p>
+          </div>
+          <div className="acd-meta">Total: {list.length} requests</div>
+        </header>
+
+        <section className="acd-topbar-card">
+          <div className="acd-sort-wrap">
+            <label htmlFor="custom-design-sort">Sort By</label>
+            <select
+              id="custom-design-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="latest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="status">Status A-Z</option>
+              <option value="jewellery">Jewellery A-Z</option>
+            </select>
+          </div>
+        </section>
+
+        <section className="acd-table-card">
+          <div className="acd-table-wrap">
+            <table className="acd-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Contact</th>
+                  <th>Jewellery</th>
+                  <th>Metal</th>
+                  <th>Status</th>
+                  <th>View</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedList.map((d) => (
+                  <tr key={d._id}>
+                    <td className="acd-user-cell">{d.userId?.name || "N/A"}</td>
+                    <td className="acd-contact-cell">
+                      <p>{d.userId?.email || "N/A"}</p>
+                      <p>{d.userId?.mobile || "No mobile"}</p>
+                    </td>
+                    <td>{d.jewelleryType || "N/A"}</td>
+                    <td>{d.metalType || "N/A"}</td>
+                    <td>
+                      <span className={`acd-status-pill ${getStatusPillClass(d.status)}`}>
+                        {d.status || "pending"}
+                      </span>
+                    </td>
+                    <td>
+                      <button type="button" className="acd-open-btn" onClick={() => setSelected(d)}>
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {list.length === 0 && <div className="acd-empty">No custom requests found</div>}
+        </section>
+
+        {selected && (
+          <DesignModal
+            design={selected}
+            onClose={() => setSelected(null)}
+            onUpdate={load}
+            onNotify={showToast}
+          />
+        )}
+      </div>
     </div>
   );
 }

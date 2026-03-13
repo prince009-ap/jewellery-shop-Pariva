@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import API from "../../services/api";
 import "../../styles/loading.css";
@@ -6,219 +6,271 @@ import "../../styles/loading.css";
 export default function Payment() {
   const location = useLocation();
   const navigate = useNavigate();
-
   const { addressId, priceBreakup, items } = location.state || {};
 
   const [codLoading, setCodLoading] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusType, setStatusType] = useState("success");
 
-  // 🔒 SAFETY CHECK
+  const formatPrice = (value) => `Rs ${Number(value || 0).toLocaleString("en-IN")}`;
+
   if (!addressId || !priceBreakup || !items || items.length === 0) {
-    return <h2 style={{ padding: 40 }}>No items to order</h2>;
+    return (
+      <div className="checkout-flow-page">
+        <div className="checkout-flow-shell">
+          <nav className="checkout-flow-breadcrumb">
+            <Link to="/home">Home</Link>
+            <span>&gt;</span>
+            <span>Payment</span>
+          </nav>
+          <div className="checkout-empty-state">No items available for payment.</div>
+        </div>
+      </div>
+    );
   }
 
-  // ================= COD =================
+  const showMessage = (message, type = "success") => {
+    setStatusMessage(message);
+    setStatusType(type);
+  };
+
   const placeCodOrder = async () => {
     if (codLoading) return;
-    
+
     try {
       setCodLoading(true);
+      showMessage("");
+
       await API.post("/orders/cod", {
         items,
         shippingAddress: addressId,
         priceBreakup: {
-  goldValue: priceBreakup.gold,
-  makingCharge: priceBreakup.making,
-  stoneCharge: priceBreakup.stone,
-  gst: priceBreakup.gst,
-  totalAmount: priceBreakup.total,
-},
-
+          goldValue: priceBreakup.gold,
+          makingCharge: priceBreakup.making,
+          stoneCharge: priceBreakup.stone,
+          gst: priceBreakup.gst,
+          totalAmount: priceBreakup.total,
+        },
       });
 
-      alert("Order placed successfully (COD)");
-      navigate("/account/orders");
+      showMessage("Order placed successfully with Cash on Delivery.", "success");
+      window.setTimeout(() => navigate("/account/orders"), 1200);
     } catch (err) {
       console.error(err.response?.data || err);
-      alert(err.response?.data?.message || "Order failed");
+      showMessage(err.response?.data?.message || "Order failed. Please try again.", "error");
     } finally {
       setCodLoading(false);
     }
   };
 
-  // ================= ONLINE =================
   const payOnline = async () => {
     if (onlineLoading) return;
-    
+
     try {
       setOnlineLoading(true);
-      console.log("💳 Creating Razorpay order...");
-      
+      showMessage("");
+
       const { data: rzOrder } = await API.post("/payment/create-order", {
         amount: priceBreakup.total,
       });
-      
-      console.log("📋 Razorpay order created:", rzOrder);
-      
+
       const order = rzOrder.order;
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY,
         amount: order.amount,
         currency: order.currency,
         order_id: order.id,
-
-  name: "PARIVA Jewellery",
-  description: "Jewellery Purchase",
-  image: "/logo.png",
-
-  prefill: {
-    name: "Customer",
-    email: "customer@email.com",
-    contact: "9999999999",
-  },
-
-  theme: {
-    color: "#d4af37",
-  },
-
-  method: {
-    upi: true,       // ✅ UPI enable
-    card: true,
-    netbanking: true,
-    wallet: true,
-  },
-
-  config: {
-    display: {
-      blocks: {
-        upi: {
-          name: "Pay via UPI",
-          instruments: [
-            { method: "upi" },     // ✅ Shows UPI ID option
-          ],
+        name: "PARIVA Jewellery",
+        description: "Jewellery Purchase",
+        image: "/logo.png",
+        prefill: {
+          name: "Customer",
+          email: "customer@email.com",
+          contact: "9999999999",
         },
-      },
-      sequence: ["block.upi", "block.card", "block.netbanking"],
-      preferences: {
-        show_default_blocks: true,
-      },
-    },
-  },
-
-  handler: async (response) => {
-    console.log("🔥 Razorpay response:", response);
-    
-    try {
-      console.log("📤 Sending verification request...");
-      
-      const { data } = await API.post("/payment/verify", {
-        ...response,
-        orderData: {
-          shippingAddress: addressId,
-          items,
-          priceBreakup: {
-            goldValue: priceBreakup.gold,
-            makingCharge: priceBreakup.making,
-            stoneCharge: priceBreakup.stone,
-            gst: priceBreakup.gst,
-            totalAmount: priceBreakup.total,
+        theme: {
+          color: "#d4af37",
+        },
+        modal: {
+          ondismiss: () => {
+            setOnlineLoading(false);
+            showMessage("Payment window closed before completion.", "error");
           },
         },
-      });
+        handler: async (response) => {
+          try {
+            const { data } = await API.post("/payment/verify", {
+              ...response,
+              orderData: {
+                shippingAddress: addressId,
+                items,
+                priceBreakup: {
+                  goldValue: priceBreakup.gold,
+                  makingCharge: priceBreakup.making,
+                  stoneCharge: priceBreakup.stone,
+                  gst: priceBreakup.gst,
+                  totalAmount: priceBreakup.total,
+                },
+              },
+            });
 
-      console.log("✅ Verification response:", data);
+            if (data.success) {
+              showMessage("Payment successful. Your order has been placed.", "success");
+              window.setTimeout(() => navigate("/account/orders"), 1200);
+            } else {
+              showMessage(data.message || "Payment verification failed.", "error");
+            }
+          } catch (err) {
+            console.error("Verification error:", err.response?.data || err);
+            showMessage(
+              err.response?.data?.message || "Payment verification failed. Please try again.",
+              "error"
+            );
+          } finally {
+            setOnlineLoading(false);
+          }
+        },
+      };
 
-      if (data.success) {
-        alert("Payment Successful! Order ID: " + data.orderId);
-        navigate("/account/orders");
-      } else {
-        alert("Payment verification failed: " + (data.message || "Unknown error"));
+      if (!window.Razorpay) {
+        throw new Error("Razorpay checkout library is not loaded");
       }
-    } catch (err) {
-      console.error("❌ Verification error:", err.response?.data || err);
-      alert("Payment verification failed: " + (err.response?.data?.message || "Network error"));
-    }
-  },
-};
 
       const rzp = new window.Razorpay(options);
+
+      rzp.on("payment.failed", (response) => {
+        console.error("Razorpay payment failed:", response.error);
+        setOnlineLoading(false);
+        showMessage(response.error?.description || "Online payment failed.", "error");
+      });
+
       rzp.open();
     } catch (err) {
       console.error(err);
-      alert("Online payment failed");
-    } finally {
       setOnlineLoading(false);
+
+      // If Razorpay script wasn't loaded, show a clear message
+      if (err.message?.includes("Razorpay")) {
+        showMessage(
+          "Payment gateway is not available right now. Please try again later.",
+          "error"
+        );
+        return;
+      }
+
+      const backendMessage = err.response?.data?.message || err.message;
+      showMessage(
+        backendMessage || "Unable to start online payment right now.",
+        "error"
+      );
     }
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 500, margin: "auto" }}>
-      <h2>Payment</h2>
+    <div className="checkout-flow-page">
+      <div className="checkout-flow-shell">
+        <nav className="checkout-flow-breadcrumb">
+          <Link to="/home">Home</Link>
+          <span>&gt;</span>
+          <Link to="/checkout">Checkout</Link>
+          <span>&gt;</span>
+          <span>Payment</span>
+        </nav>
 
-      <div style={{ border: "1px solid #ddd", padding: "1rem" }}>
-        <p>Gold: ₹{priceBreakup.gold}</p>
-        <p>Making: ₹{priceBreakup.making}</p>
-        <p>Stone: ₹{priceBreakup.stone}</p>
-        <p>GST: ₹{priceBreakup.gst}</p>
-        <hr />
-        <h3>Total: ₹{priceBreakup.total}</h3>
+        <header className="checkout-flow-header">
+          <div>
+            <p className="checkout-flow-kicker">Secure Payment</p>
+            <h1>Choose how you want to pay</h1>
+            <p>Review your total once and complete the order with your preferred method.</p>
+          </div>
+        </header>
+
+        <div className="payment-flow-layout">
+          <section className="payment-summary-card">
+            <div className="checkout-section-head">
+              <div>
+                <p className="checkout-section-kicker">Summary</p>
+                <h2>Price Details</h2>
+              </div>
+              <span>{items.length} item(s)</span>
+            </div>
+
+            <div className="checkout-summary-list">
+              {items.map((item) => (
+                <div key={`${item.product}-${item.qty}`} className="checkout-summary-item">
+                  <img
+                    src={`http://localhost:5000/uploads/${item.image}`}
+                    alt={item.name}
+                    className="checkout-summary-item__image"
+                  />
+                  <div className="checkout-summary-item__copy">
+                    <strong>{item.name}</strong>
+                    <span>Qty {item.qty}</span>
+                  </div>
+                  <div className="checkout-summary-item__price">
+                    {formatPrice(item.price * item.qty)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="checkout-bill">
+              <div className="checkout-bill-row">
+                <span>Gold Value</span>
+                <strong>{formatPrice(priceBreakup.gold)}</strong>
+              </div>
+              <div className="checkout-bill-row">
+                <span>Making Charges</span>
+                <strong>{formatPrice(priceBreakup.making.toFixed(0))}</strong>
+              </div>
+              <div className="checkout-bill-row">
+                <span>Stone Charges</span>
+                <strong>{formatPrice(priceBreakup.stone)}</strong>
+              </div>
+              <div className="checkout-bill-row">
+                <span>GST (3%)</span>
+                <strong>{formatPrice(priceBreakup.gst.toFixed(0))}</strong>
+              </div>
+              <div className="checkout-bill-total">
+                <span>Total</span>
+                <strong>{formatPrice(priceBreakup.total.toFixed(0))}</strong>
+              </div>
+            </div>
+          </section>
+
+          <aside className="payment-method-card">
+            <div className="checkout-section-head">
+              <div>
+                <p className="checkout-section-kicker">Methods</p>
+                <h2>Payment Options</h2>
+              </div>
+            </div>
+
+            {statusMessage ? (
+              <div className={`checkout-inline-message ${statusType}`}>{statusMessage}</div>
+            ) : null}
+
+            <button
+              type="button"
+              className="payment-method-btn"
+              onClick={placeCodOrder}
+              disabled={codLoading || onlineLoading}
+            >
+              {codLoading ? "Placing COD Order..." : "Cash on Delivery"}
+            </button>
+
+            <button
+              type="button"
+              className="payment-method-btn payment-method-btn--alt"
+              onClick={payOnline}
+              disabled={onlineLoading || codLoading}
+            >
+              {onlineLoading ? "Opening Payment..." : "Pay Online (UPI / Card)"}
+            </button>
+          </aside>
+        </div>
       </div>
-
-      <button
-        style={{ 
-          marginTop: "1rem", 
-          width: "100%",
-          padding: "1rem",
-          backgroundColor: codLoading ? "#6b7280" : "#10b981",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          fontSize: "1rem",
-          fontWeight: "600",
-          cursor: codLoading ? "not-allowed" : "pointer",
-          opacity: codLoading ? 0.8 : 1
-        }}
-        onClick={placeCodOrder}
-        disabled={codLoading}
-        className={codLoading ? 'button-loading' : ''}
-      >
-        {codLoading ? (
-          <span className="button-loading-content">
-            <span className="loading-spinner-small"></span>
-            Placing Order...
-          </span>
-        ) : (
-          'Cash on Delivery'
-        )}
-      </button>
-
-      <button
-        style={{ 
-          marginTop: "0.5rem", 
-          width: "100%",
-          padding: "1rem",
-          backgroundColor: onlineLoading ? "#6b7280" : "#3b82f6",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          fontSize: "1rem",
-          fontWeight: "600",
-          cursor: onlineLoading ? "not-allowed" : "pointer",
-          opacity: onlineLoading ? 0.8 : 1
-        }}
-        onClick={payOnline}
-        disabled={onlineLoading}
-        className={onlineLoading ? 'button-loading' : ''}
-      >
-        {onlineLoading ? (
-          <span className="button-loading-content">
-            <span className="loading-spinner-small"></span>
-            Processing...
-          </span>
-        ) : (
-          'Pay Online (UPI / Card)'
-        )}
-      </button>
     </div>
   );
 }

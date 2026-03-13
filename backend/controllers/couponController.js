@@ -1,4 +1,5 @@
 import Coupon from "../models/Coupon.js";
+import Order from "../models/Order.js";
 
 export const createCoupon = async (req, res) => {
   try {
@@ -15,10 +16,22 @@ export const applyCoupon = async (req, res) => {
   const coupon = await Coupon.findOne({ code, isActive: true });
 
   if (!coupon) return res.status(400).json({ message: "Invalid coupon" });
-  if (new Date() > coupon.expiryDate)
+  if (coupon.expiryDate && new Date() > coupon.expiryDate)
     return res.status(400).json({ message: "Coupon expired" });
   if (cartTotal < coupon.minOrderValue)
     return res.status(400).json({ message: "Minimum order not met" });
+  if (coupon.firstOrderOnly) {
+    const completedOrders = await Order.countDocuments({
+      user: req.user._id,
+      orderStatus: { $ne: "cancelled" },
+    });
+
+    if (completedOrders > 0) {
+      return res.status(400).json({
+        message: "This welcome coupon is only valid on the first order.",
+      });
+    }
+  }
 
   let discount =
     coupon.discountType === "flat"
@@ -28,6 +41,7 @@ export const applyCoupon = async (req, res) => {
   res.json({
     discount,
     finalAmount: cartTotal - discount,
+    firstOrderOnly: coupon.firstOrderOnly,
   });
 };
 export const toggleCouponStatus = async (req, res) => {
@@ -46,6 +60,26 @@ export const toggleCouponStatus = async (req, res) => {
       message: `Coupon ${coupon.isActive ? "enabled" : "disabled"} successfully`,
       isActive: coupon.isActive,
     });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const deleteCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const coupon = await Coupon.findById(id);
+
+    if (!coupon) {
+      return res.status(404).json({ message: "Coupon not found" });
+    }
+
+    if (coupon.isActive) {
+      return res.status(400).json({ message: "Disable coupon before removing" });
+    }
+
+    await coupon.deleteOne();
+    res.json({ message: "Coupon removed successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -1,39 +1,55 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
+import "./AdminOrderDetails.css";
+
+const ORDER_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+const PROGRESS_FLOW = ["pending", "confirmed", "shipped", "delivered"];
+
+const toTitle = (value) => value.charAt(0).toUpperCase() + value.slice(1);
 
 function AdminOrderDetails() {
-  
   const { id } = useParams();
   const navigate = useNavigate();
-    
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const toastTimerRef = useRef(null);
   const [tracking, setTracking] = useState({
     courier: "",
     trackingId: "",
     status: "Order Placed",
   });
 
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast({ open: false, message: "", type: "success" });
+    }, 2400);
+  };
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(toastTimerRef.current);
+    },
+    []
+  );
+
   useEffect(() => {
     let isMounted = true;
 
     const fetchOrder = async () => {
       try {
-        console.log("API CALL:", `/orders/admin/${id}`);
-        console.log("Order ID from params:", id);
         const res = await adminAPI.get(`/orders/admin/${id}`);
-        console.log("API RESPONSE:", res.data);
         if (isMounted) {
-          console.log("📥 Order details received:", res.data);
           setOrder(res.data);
           setLoading(false);
         }
-      } catch (error) {
-        console.error("API ERROR:", error.response?.data || error.message);
-        console.error("❌ Order not found:", error);
-        alert("Order not found: " + (error.response?.data?.message || error.message));
+      } catch {
+        showToast("Order not found", "error");
         setLoading(false);
       }
     };
@@ -48,55 +64,69 @@ function AdminOrderDetails() {
   const updateStatus = async (status) => {
     try {
       const normalizedStatus = status.toLowerCase();
-      console.log("Sending normalized status:", normalizedStatus);
       if (!order?._id) return;
-      
+
       setUpdatingStatus(true);
-      
-console.log("API CALL:", `/orders/admin/${order._id}/status`);
-      const res = await adminAPI.put(`/orders/admin/${order._id}/status`, {
-        status: normalizedStatus
+
+      await adminAPI.put(`/orders/admin/${order._id}/status`, {
+        status: normalizedStatus,
       });
-      console.log("API RESPONSE:", res.data);
-      
-      // 🔄 reload order after update
-      console.log("API CALL:", `/orders/admin/${order._id}`);
+
       const updatedRes = await adminAPI.get(`/orders/admin/${order._id}`);
-      console.log("Updated order:", updatedRes.data);
       setOrder(updatedRes.data);
-      alert("Status updated successfully!");
-    } catch (err) {
-      console.error("API ERROR:", err.response?.data || err.message);
-      console.error("Failed to update order status", err);
-      alert("Failed to update status");
+      showToast("Status updated successfully");
+    } catch {
+      showToast("Failed to update status", "error");
     } finally {
       setUpdatingStatus(false);
     }
   };
 
+  const getAllowedStatuses = (currentStatusRaw) => {
+    const current = (currentStatusRaw || "").toLowerCase();
+
+    if (current === "cancelled") return ["cancelled"];
+    if (current === "delivered") return ["delivered"];
+
+    const idx = PROGRESS_FLOW.indexOf(current);
+    if (idx === -1) return ORDER_STATUSES;
+
+    return [...PROGRESS_FLOW.slice(idx), "cancelled"];
+  };
+
+  const saveTracking = async () => {
+    try {
+      await adminAPI.put(`/orders/admin/${order._id}/tracking`, tracking);
+      showToast("Tracking information saved");
+    } catch {
+      showToast("Failed to save tracking", "error");
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
-  pending: { color: "#f59e0b", bgColor: "#fef3c7", icon: "⏳" },
-  confirmed: { color: "#10b981", bgColor: "#d1fae5", icon: "✅" },
-  shipped: { color: "#3b82f6", bgColor: "#dbeafe", icon: "📦" },
-  delivered: { color: "#8b5cf6", bgColor: "#ede9fe", icon: "🎉" },
-  cancelled: { color: "#ef4444", bgColor: "#fee2e2", icon: "❌" }
-};
-   const config = statusConfig[status?.toLowerCase()] || statusConfig.pending;
+      pending: { color: "#92400e", bgColor: "#fef3c7", icon: "P" },
+      confirmed: { color: "#065f46", bgColor: "#d1fae5", icon: "C" },
+      shipped: { color: "#1e40af", bgColor: "#dbeafe", icon: "S" },
+      delivered: { color: "#6d28d9", bgColor: "#ede9fe", icon: "D" },
+      cancelled: { color: "#991b1b", bgColor: "#fee2e2", icon: "X" },
+    };
+
+    const config = statusConfig[status?.toLowerCase()] || statusConfig.pending;
     return {
       ...config,
-      status
+      status,
     };
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -114,477 +144,228 @@ console.log("API CALL:", `/orders/admin/${order._id}/status`);
   if (!order) return null;
 
   const statusBadge = getStatusBadge(order.orderStatus);
+  const allowedStatuses = getAllowedStatuses(order.orderStatus);
+  const isFinalStatus = ["delivered", "cancelled"].includes((order.orderStatus || "").toLowerCase());
 
   return (
-    <div style={{ 
-      padding: "2rem", 
-      maxWidth: "1200px", 
-      margin: "auto",
-      background: "#f9fafb",
-      minHeight: "100vh"
-    }}>
-      {/* Header */}
-      <div style={{
-        marginBottom: "2rem",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            padding: "0.75rem 1.5rem",
-            backgroundColor: "#6b7280",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "1rem",
-            fontWeight: "500",
-            cursor: "pointer",
-            transition: "background-color 0.2s ease"
-          }}
-        >
-          ← Back to Orders
-        </button>
-
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          padding: "0.5rem 1rem",
-          backgroundColor: statusBadge.bgColor,
-          color: statusBadge.color,
-          borderRadius: "20px",
-          fontSize: "1rem",
-          fontWeight: "600"
-        }}>
-          <span>{statusBadge.icon}</span>
-          {statusBadge.status}
+    <div className="aod-page">
+      {toast.open && (
+        <div className={`aod-toast aod-toast-${toast.type}`} role="status" aria-live="polite">
+          {toast.message}
         </div>
-      </div>
-
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-        gap: "1.5rem",
-        marginBottom: "2rem"
-      }}>
-        {/* Order Info Card */}
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-          border: "1px solid #e5e7eb"
-        }}>
-          <h3 style={{
-            margin: "0 0 1rem 0",
-            fontSize: "1.125rem",
-            fontWeight: "600",
-            color: "#111827"
-          }}>
-            Order Information
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                Order ID
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: "600", color: "#111827" }}>
-                #{order._id?.slice(-8).toUpperCase()}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                Order Date
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: "500", color: "#111827" }}>
-                {formatDate(order.createdAt)}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                Payment Method
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: "500", color: "#111827" }}>
-                {(() => {
-                  console.log("Payment object:", order.payment);
-                  return order.payment?.method || "N/A";
-                })()}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                Payment Status
-              </div>
-              <div style={{ 
-                fontSize: "1rem", 
-                fontWeight: "600", 
-                color: order.payment?.status === "paid" ? "#10b981" : "#f59e0b"
-              }}>
-                {order.payment?.status || "N/A"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Customer Info Card */}
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-          border: "1px solid #e5e7eb"
-        }}>
-          <h3 style={{
-            margin: "0 0 1rem 0",
-            fontSize: "1.125rem",
-            fontWeight: "600",
-            color: "#111827"
-          }}>
-            Customer Information
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                Name
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: "600", color: "#111827" }}>
-                {order.user?.name || "N/A"}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                Email
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: "500", color: "#111827" }}>
-                {order.user?.email || "N/A"}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Shipping Address Card */}
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "1.5rem",
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-        border: "1px solid #e5e7eb",
-        marginBottom: "2rem"
-      }}>
-        <h3 style={{
-          margin: "0 0 1rem 0",
-          fontSize: "1.125rem",
-          fontWeight: "600",
-          color: "#111827"
-        }}>
-          Delivery Address
-        </h3>
-        <div style={{
-          backgroundColor: "#f9fafb",
-          padding: "1rem",
-          borderRadius: "8px",
-          fontSize: "1rem",
-          lineHeight: "1.6",
-          color: "#111827"
-        }}>
-          {order.shippingAddress ? (
-            <>
-              <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>
-                {order.shippingAddress.name}
-              </div>
-              <div>{order.shippingAddress.address}</div>
-              <div>{order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}</div>
-              <div style={{ marginTop: "0.5rem" }}>
-                📱 {order.shippingAddress.phone}
-              </div>
-            </>
-          ) : (
-            <div style={{ color: "#6b7280" }}>No address available</div>
-          )}
-        </div>
-      </div>
-
-      {/* Order Items Card */}
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "1.5rem",
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-        border: "1px solid #e5e7eb",
-        marginBottom: "2rem"
-      }}>
-        <h3 style={{
-          margin: "0 0 1.5rem 0",
-          fontSize: "1.125rem",
-          fontWeight: "600",
-          color: "#111827"
-        }}>
-          Order Items
-        </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {order.items?.map((item, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                gap: "1rem",
-                padding: "1rem",
-                backgroundColor: "#f9fafb",
-                borderRadius: "8px",
-                border: "1px solid #e5e7eb"
-              }}
-            >
-              <img
-                src={`http://localhost:5000/uploads/${item.image}`}
-                width="80"
-                height="80"
-                style={{
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  border: "1px solid #e5e7eb"
-                }}
-                alt={item.name}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  fontSize: "1rem",
-                  fontWeight: "600",
-                  color: "#111827",
-                  marginBottom: "0.5rem"
-                }}>
-                  {item.name}
-                </div>
-                <div style={{
-                  fontSize: "0.875rem",
-                  color: "#6b7280",
-                  marginBottom: "0.25rem"
-                }}>
-                  Quantity: {item.qty}
-                </div>
-                <div style={{
-                  fontSize: "0.875rem",
-                  color: "#6b7280",
-                  marginBottom: "0.5rem"
-                }}>
-                  Metal: {item.metal || "N/A"}
-                </div>
-                <div style={{
-                  fontSize: "1.125rem",
-                  fontWeight: "700",
-                  color: "#111827"
-                }}>
-                  ₹{(item.price * item.qty).toLocaleString('en-IN')}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Price Summary Card */}
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "1.5rem",
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-        border: "1px solid #e5e7eb",
-        marginBottom: "2rem"
-      }}>
-        <h3 style={{
-          margin: "0 0 1rem 0",
-          fontSize: "1.125rem",
-          fontWeight: "600",
-          color: "#111827"
-        }}>
-          Price Summary
-        </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {order.priceBreakup && (
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#6b7280" }}>Gold Value:</span>
-                <span style={{ fontWeight: "500" }}>₹{order.priceBreakup.goldValue?.toLocaleString('en-IN') || 0}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#6b7280" }}>Making Charge:</span>
-                <span style={{ fontWeight: "500" }}>₹{order.priceBreakup.makingCharge?.toLocaleString('en-IN') || 0}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#6b7280" }}>Stone Charge:</span>
-                <span style={{ fontWeight: "500" }}>₹{order.priceBreakup.stoneCharge?.toLocaleString('en-IN') || 0}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#6b7280" }}>GST:</span>
-                <span style={{ fontWeight: "500" }}>₹{order.priceBreakup.gst?.toLocaleString('en-IN') || 0}</span>
-              </div>
-            </>
-          )}
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            paddingTop: "0.75rem",
-            borderTop: "2px solid #e5e7eb"
-          }}>
-            <span style={{ fontSize: "1.125rem", fontWeight: "700", color: "#111827" }}>Total Amount:</span>
-            <span style={{ fontSize: "1.25rem", fontWeight: "700", color: "#111827" }}>
-              ₹{order.priceBreakup?.totalAmount?.toLocaleString('en-IN') || 0}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Order Management Card */}
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "1.5rem",
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-        border: "1px solid #e5e7eb"
-      }}>
-        <h3 style={{
-          margin: "0 0 1.5rem 0",
-          fontSize: "1.125rem",
-          fontWeight: "600",
-          color: "#111827"
-        }}>
-          Order Management
-        </h3>
-        
-        {/* Update Status */}
-        <div style={{ marginBottom: "2rem" }}>
-          <label style={{
-            display: "block",
-            marginBottom: "0.5rem",
-            fontWeight: "600",
-            color: "#374151",
-            fontSize: "0.875rem"
-          }}>
-            Update Order Status
-          </label>
-          <select
-            value={order.orderStatus}
-            onChange={(e) => updateStatus(e.target.value)}
-            disabled={updatingStatus}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              backgroundColor: updatingStatus ? "#e9ecef" : "white",
-              opacity: updatingStatus ? 0.7 : 1
-            }}
-          >
-            <option value="pending">Pending</option>
-<option value="confirmed">Confirmed</option>
-<option value="shipped">Shipped</option>
-<option value="delivered">Delivered</option>
-<option value="cancelled">Cancelled</option>
-          </select>
-          {updatingStatus && (
-            <div style={{ 
-              marginTop: "0.5rem", 
-              fontSize: "0.875rem", 
-              color: "#6b7280",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem"
-            }}>
-              <div className="loading-spinner loading-spinner-small"></div>
-              Updating status...
-            </div>
-          )}
-        </div>
-
-        {/* Tracking Info */}
-        <div>
-          <label style={{
-            display: "block",
-            marginBottom: "1rem",
-            fontWeight: "600",
-            color: "#374151",
-            fontSize: "0.875rem"
-          }}>
-            Shipment Tracking
-          </label>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1rem",
-            marginBottom: "1rem"
-          }}>
-            <input
-              placeholder="Courier Name"
-              value={tracking.courier}
-              onChange={(e) => setTracking({ ...tracking, courier: e.target.value })}
-              style={{
-                padding: "0.75rem",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "1rem"
-              }}
-            />
-            <input
-              placeholder="Tracking ID"
-              value={tracking.trackingId}
-              onChange={(e) => setTracking({ ...tracking, trackingId: e.target.value })}
-              style={{
-                padding: "0.75rem",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "1rem"
-              }}
-            />
-          </div>
-          <select
-            value={tracking.status}
-            onChange={(e) => setTracking({ ...tracking, status: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              marginBottom: "1rem",
-              backgroundColor: "white"
-            }}
-          >
-            <option value="Order Placed">Order Placed</option>
-            <option value="In Transit">In Transit</option>
-            <option value="Out for Delivery">Out for Delivery</option>
-            <option value="Delivered">Delivered</option>
-          </select>
+      )}
+      <div className="aod-shell">
+        <nav className="aod-breadcrumb">
           <button
-            onClick={() => {
-              console.log("API CALL:", `/orders/admin/${order._id}/tracking`);
-              adminAPI.put(`/orders/admin/${order._id}/tracking`, tracking)
-                .then((res) => {
-                  console.log("API RESPONSE:", res.data);
-                  alert("Tracking information saved");
-                })
-                .catch((err) => {
-                  console.error("API ERROR:", err.response?.data || err.message);
-                  alert("Failed to save tracking");
-                });
-            }}
-            style={{
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#3b82f6",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              fontWeight: "500",
-              cursor: "pointer",
-              transition: "background-color 0.2s ease"
-            }}
+            type="button"
+            className="aod-crumb-btn"
+            onClick={() => navigate("/admin/dashboard", { replace: true })}
           >
-            Save Tracking Information
+            Home
           </button>
-        </div>
+          <span>&gt;</span>
+          <button
+            type="button"
+            className="aod-crumb-btn"
+            onClick={() => navigate("/admin/orders", { replace: true })}
+          >
+            Orders
+          </button>
+          <span>&gt;</span>
+          <span>Details</span>
+        </nav>
+
+        <header className="aod-header">
+          <button
+            type="button"
+            className="aod-btn aod-btn-neutral"
+            onClick={() => navigate("/admin/orders", { replace: true })}
+          >
+            Back to Orders
+          </button>
+
+          <div
+            className="aod-status-pill"
+            style={{ backgroundColor: statusBadge.bgColor, color: statusBadge.color }}
+          >
+            <span>{statusBadge.icon}</span>
+            <span>{statusBadge.status}</span>
+          </div>
+        </header>
+
+        <section className="aod-grid-two">
+          <article className="aod-card">
+            <h3>Order Information</h3>
+            <div className="aod-stack">
+              <div>
+                <p className="aod-label">Order ID</p>
+                <p className="aod-value">#{order._id?.slice(-8).toUpperCase()}</p>
+              </div>
+              <div>
+                <p className="aod-label">Order Date</p>
+                <p className="aod-value">{formatDate(order.createdAt)}</p>
+              </div>
+              <div>
+                <p className="aod-label">Payment Method</p>
+                <p className="aod-value">{order.payment?.method || "N/A"}</p>
+              </div>
+              <div>
+                <p className="aod-label">Payment Status</p>
+                <p className={`aod-value ${order.payment?.status === "paid" ? "aod-paid" : "aod-pending"}`}>
+                  {order.payment?.status || "N/A"}
+                </p>
+              </div>
+            </div>
+          </article>
+
+          <article className="aod-card">
+            <h3>Customer Information</h3>
+            <div className="aod-stack">
+              <div>
+                <p className="aod-label">Name</p>
+                <p className="aod-value">{order.user?.name || "N/A"}</p>
+              </div>
+              <div>
+                <p className="aod-label">Email</p>
+                <p className="aod-value">{order.user?.email || "N/A"}</p>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section className="aod-card">
+          <h3>Delivery Address</h3>
+          <div className="aod-surface">
+            {order.shippingAddress ? (
+              <>
+                <p className="aod-value">{order.shippingAddress.name}</p>
+                <p>{order.shippingAddress.address}</p>
+                <p>
+                  {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
+                </p>
+                <p>Phone: {order.shippingAddress.phone}</p>
+              </>
+            ) : (
+              <p className="aod-muted">No address available</p>
+            )}
+          </div>
+        </section>
+
+        <section className="aod-card">
+          <h3>Order Items</h3>
+          <div className="aod-items-list">
+            {order.items?.map((item, i) => (
+              <article className="aod-item" key={i}>
+                <img src={`http://localhost:5000/uploads/${item.image}`} alt={item.name} />
+                <div>
+                  <p className="aod-item-name">{item.name}</p>
+                  <p className="aod-item-meta">Quantity: {item.qty}</p>
+                  <p className="aod-item-meta">Metal: {item.metal || "N/A"}</p>
+                </div>
+                <p className="aod-item-price">Rs {(item.price * item.qty).toLocaleString("en-IN")}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="aod-card">
+          <h3>Price Summary</h3>
+          <div className="aod-summary">
+            {order.priceBreakup && (
+              <>
+                <div className="aod-row">
+                  <span>Gold Value</span>
+                  <strong>Rs {order.priceBreakup.goldValue?.toLocaleString("en-IN") || 0}</strong>
+                </div>
+                <div className="aod-row">
+                  <span>Making Charge</span>
+                  <strong>Rs {order.priceBreakup.makingCharge?.toLocaleString("en-IN") || 0}</strong>
+                </div>
+                <div className="aod-row">
+                  <span>Stone Charge</span>
+                  <strong>Rs {order.priceBreakup.stoneCharge?.toLocaleString("en-IN") || 0}</strong>
+                </div>
+                <div className="aod-row">
+                  <span>GST</span>
+                  <strong>Rs {order.priceBreakup.gst?.toLocaleString("en-IN") || 0}</strong>
+                </div>
+              </>
+            )}
+            <div className="aod-total">
+              <span>Total Amount</span>
+              <strong>Rs {order.priceBreakup?.totalAmount?.toLocaleString("en-IN") || 0}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="aod-card">
+          <h3>Order Management</h3>
+
+          <div className="aod-form-block">
+            <label htmlFor="order-status">Update Order Status</label>
+            <select
+              id="order-status"
+              className="aod-field"
+              value={order.orderStatus}
+              onChange={(e) => {
+                const nextStatus = e.target.value;
+                if (!allowedStatuses.includes(nextStatus)) {
+                  showToast("Previous status par wapas nahi ja sakte", "error");
+                  return;
+                }
+                updateStatus(nextStatus);
+              }}
+              disabled={updatingStatus || isFinalStatus}
+            >
+              {ORDER_STATUSES.map((status) => (
+                <option key={status} value={status} disabled={!allowedStatuses.includes(status)}>
+                  {toTitle(status)}
+                </option>
+              ))}
+            </select>
+            {updatingStatus && (
+              <div className="aod-updating">
+                <div className="loading-spinner loading-spinner-small"></div>
+                Updating status...
+              </div>
+            )}
+            {isFinalStatus && (
+              <div className="aod-updating">This order is in final status and can no longer be changed.</div>
+            )}
+          </div>
+
+          <div className="aod-form-block">
+            <label>Shipment Tracking</label>
+            <div className="aod-field-grid">
+              <input
+                className="aod-field"
+                placeholder="Courier Name"
+                value={tracking.courier}
+                onChange={(e) => setTracking({ ...tracking, courier: e.target.value })}
+              />
+              <input
+                className="aod-field"
+                placeholder="Tracking ID"
+                value={tracking.trackingId}
+                onChange={(e) => setTracking({ ...tracking, trackingId: e.target.value })}
+              />
+            </div>
+            <select
+              className="aod-field"
+              value={tracking.status}
+              onChange={(e) => setTracking({ ...tracking, status: e.target.value })}
+            >
+              <option value="Order Placed">Order Placed</option>
+              <option value="In Transit">In Transit</option>
+              <option value="Out for Delivery">Out for Delivery</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+
+            <button type="button" className="aod-btn aod-btn-primary" onClick={saveTracking}>
+              Save Tracking Information
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );

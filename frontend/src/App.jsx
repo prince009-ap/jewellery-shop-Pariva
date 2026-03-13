@@ -31,6 +31,7 @@ import { CartProvider } from "./context/CartProvider";
 import { WishlistProvider } from "./context/WishlistContext";
 import LoaderProvider from "./context/LoaderProvider";
 import { useLoader } from "./context/useLoader";
+import { useAuth } from "./context/AuthContext";
 
 
 import AppRoutes from "./routes";
@@ -39,6 +40,7 @@ import { registerLoader } from "./services/api";
 
 function AppContent() {
   const { loading, setLoading } = useLoader();
+  const { user } = useAuth();
 
   useEffect(() => {
     registerLoader(setLoading);

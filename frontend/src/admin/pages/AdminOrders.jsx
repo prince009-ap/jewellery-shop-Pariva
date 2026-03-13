@@ -1,19 +1,21 @@
-
-import { useEffect, useState } from "react";
-import adminAPI from "../../services/adminApi";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import adminAPI from "../../services/adminApi";
+import "./AdminOrders.css";
 
 function AdminOrders() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [sortBy, setSortBy] = useState("latest");
+  const [pendingRemove, setPendingRemove] = useState(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState("");
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      console.log("API CALL:", "/orders/admin/all");
       const res = await adminAPI.get("/orders/admin/all");
-      console.log("API RESPONSE:", res.data);
       setOrders(res.data);
     } catch (error) {
       console.error("API ERROR:", error.response?.data || error.message);
@@ -29,358 +31,279 @@ function AdminOrders() {
 
   const updateStatus = async (orderId, newStatus) => {
     try {
-      console.log("📌 Updating order status:", orderId);
-      console.log("📌 New status:", newStatus);
-      
+      setUpdatingOrderId(orderId);
       const normalizedStatus = newStatus.toLowerCase();
-      console.log("Sending normalized status:", normalizedStatus);
-      
-      console.log("API CALL:", `/orders/admin/${orderId}/status`);
-      const res = await adminAPI.put(`/orders/admin/${orderId}/status`, { status: normalizedStatus });
-      console.log("API RESPONSE:", res.data);
-      
-      fetchOrders(); // Refresh orders
+      await adminAPI.put(`/orders/admin/${orderId}/status`, { status: normalizedStatus });
+      fetchOrders();
     } catch (error) {
       console.error("API ERROR:", error.response?.data || error.message);
       console.error("Failed to update status:", error);
       if (!error.response?.data?.success) {
-  alert("Failed to update order status");
-}
+        alert("Failed to update order status");
+      }
+    } finally {
+      setUpdatingOrderId("");
     }
   };
 
   const removeOrder = async (orderId) => {
     try {
-      console.log("API CALL:", `/orders/admin/${orderId}`);
-      const res = await adminAPI.delete(`/orders/admin/${orderId}`);
-      console.log("API RESPONSE:", res.data);
-      alert("Order removed successfully");
-      fetchOrders(); // Refresh orders
+      setRemoveLoading(true);
+      await adminAPI.delete(`/orders/admin/${orderId}`);
+      setPendingRemove(null);
+      fetchOrders();
     } catch (error) {
       console.error("API ERROR:", error.response?.data || error.message);
       alert("Failed to remove order");
+    } finally {
+      setRemoveLoading(false);
     }
   };
 
   const getStatusBadge = (status) => {
-  const statusConfig = {
-  pending: { color: "#f59e0b", bgColor: "#fef3c7", icon: "⏳" },
-  confirmed: { color: "#10b981", bgColor: "#d1fae5", icon: "✅" },
-  shipped: { color: "#3b82f6", bgColor: "#dbeafe", icon: "📦" },
-  delivered: { color: "#8b5cf6", bgColor: "#ede9fe", icon: "🎉" },
-  cancelled: { color: "#ef4444", bgColor: "#fee2e2", icon: "❌" }
-};
+    const statusConfig = {
+      pending: { color: "#b45309", bgColor: "#fef3c7", label: "Pending" },
+      confirmed: { color: "#047857", bgColor: "#d1fae5", label: "Confirmed" },
+      shipped: { color: "#1d4ed8", bgColor: "#dbeafe", label: "Shipped" },
+      delivered: { color: "#6d28d9", bgColor: "#ede9fe", label: "Delivered" },
+      cancelled: { color: "#b91c1c", bgColor: "#fee2e2", label: "Cancelled" },
+    };
 
-const config = statusConfig[status?.toLowerCase()] || statusConfig.pending;
-
-return {
-  ...config,
-  status: status?.toUpperCase()
-};
+    return statusConfig[status?.toLowerCase()] || statusConfig.pending;
   };
 
   const getNextStatuses = (currentStatus) => {
     const statusFlow = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["shipped", "cancelled"],
-  shipped: ["delivered", "cancelled"],
-  delivered: [],
-  cancelled: []
-};
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["shipped", "cancelled"],
+      shipped: ["delivered", "cancelled"],
+      delivered: [],
+      cancelled: [],
+    };
 
-return statusFlow[currentStatus?.toLowerCase()] || [];
-   
+    return statusFlow[currentStatus?.toLowerCase()] || [];
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
+  const getOrderImageSrc = (order) => {
+    const image = order.items?.[0]?.image;
+    return image ? `http://localhost:5000/uploads/${image}` : "";
+  };
+
+  const sortedOrders = useMemo(() => {
+    const arr = [...orders];
+
+    switch (sortBy) {
+      case "oldest":
+        arr.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        break;
+      case "amount_high":
+        arr.sort(
+          (a, b) =>
+            Number(b.priceBreakup?.totalAmount || 0) - Number(a.priceBreakup?.totalAmount || 0)
+        );
+        break;
+      case "amount_low":
+        arr.sort(
+          (a, b) =>
+            Number(a.priceBreakup?.totalAmount || 0) - Number(b.priceBreakup?.totalAmount || 0)
+        );
+        break;
+      case "status":
+        arr.sort((a, b) => (a.orderStatus || "").localeCompare(b.orderStatus || ""));
+        break;
+      case "payment":
+        arr.sort((a, b) =>
+          (a.payment?.method || "").localeCompare(b.payment?.method || "")
+        );
+        break;
+      case "latest":
+      default:
+        arr.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        break;
+    }
+
+    return arr;
+  }, [orders, sortBy]);
+
   if (loading) {
     return (
-      <div style={{ 
-        padding: "2rem", 
-        textAlign: "center",
-        fontSize: "1.125rem",
-        color: "#6b7280"
-      }}>
-        Loading orders...
+      <div className="page-loading-overlay">
+        <div className="page-loading-content">
+          <div className="loading-spinner loading-spinner-large"></div>
+          <div className="page-loading-text">Loading orders...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      padding: "2rem",
-      background: "#f9fafb",
-      minHeight: "100vh"
-    }}>
-      {/* Header */}
-      <div style={{
-        marginBottom: "2rem",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}>
-        <h1 style={{
-          margin: 0,
-          fontSize: "2rem",
-          fontWeight: "700",
-          color: "#111827"
-        }}>
-          All Orders
-        </h1>
-        <div style={{
-          backgroundColor: "#e5e7eb",
-          padding: "0.5rem 1rem",
-          borderRadius: "8px",
-          fontSize: "0.875rem",
-          color: "#6b7280"
-        }}>
-          Total: {orders.length} orders
-        </div>
+    <div className="admin-orders-page">
+      <div className="ao-shell">
+        <nav className="ao-breadcrumb">
+          <button
+            type="button"
+            className="ao-crumb-btn"
+            onClick={() => navigate("/admin/dashboard", { replace: true })}
+          >
+            Home
+          </button>
+          <span>&gt;</span>
+          <span>Orders</span>
+        </nav>
+
+        <header className="ao-header">
+          <div>
+            <p className="ao-kicker">PARIVA Fulfillment Hub</p>
+            <h1>All Orders</h1>
+            <p>Track and manage every order from one place.</p>
+          </div>
+
+          <div className="ao-meta">Total: {orders.length} orders</div>
+        </header>
+
+        <section className="ao-topbar-card">
+          <div className="ao-sort-wrap">
+            <label htmlFor="order-sort">Sort By</label>
+            <select id="order-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="latest">Latest Orders</option>
+              <option value="oldest">Oldest Orders</option>
+              <option value="amount_high">Amount High-Low</option>
+              <option value="amount_low">Amount Low-High</option>
+              <option value="status">Status A-Z</option>
+              <option value="payment">Payment Method A-Z</option>
+            </select>
+          </div>
+        </section>
+
+        <section className="ao-grid">
+          {sortedOrders.map((order) => {
+            const statusBadge = getStatusBadge(order.orderStatus);
+            const nextStatuses = getNextStatuses(order.orderStatus);
+            const isUpdating = updatingOrderId === order._id;
+
+            return (
+              <article className="ao-card" key={order._id}>
+                <div className="ao-head">
+                  <div className="ao-head-main">
+                    {order.items?.[0]?.image ? (
+                      <img
+                        src={getOrderImageSrc(order)}
+                        alt={order.items?.[0]?.name || "Order item"}
+                        className="ao-order-image"
+                      />
+                    ) : null}
+                    <div className="ao-head-copy">
+                      <p className="ao-head-id">
+                        <span className="ao-head-label-inline">Order ID:</span>{" "}
+                        #{order._id?.slice(-8).toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className="ao-status-pill"
+                    style={{ backgroundColor: statusBadge.bgColor, color: statusBadge.color }}
+                  >
+                    {statusBadge.label}
+                  </div>
+                </div>
+
+                <div className="ao-customer-box">
+                  <p className="ao-box-label">Customer</p>
+                  <p className="ao-customer-name">{order.user?.name || "Unknown Customer"}</p>
+                  <p className="ao-customer-email">{order.user?.email || "No email"}</p>
+                </div>
+
+                <div className="ao-metrics">
+                  <div>
+                    <p className="ao-metric-label">Total Amount</p>
+                    <p className="ao-metric-value">
+                      Rs {Number(order.priceBreakup?.totalAmount || 0).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="ao-metric-label">Payment Method</p>
+                    <p className="ao-metric-value plain">{order.payment?.method || "N/A"}</p>
+                  </div>
+                </div>
+
+                <p className="ao-date-row">
+                  <strong>Order Date:</strong> {formatDate(order.createdAt)}
+                </p>
+
+                <div className="ao-actions">
+                  {nextStatuses.map((status) => (
+                    <button
+                      key={status}
+                      className={`ao-pill-btn ${status === "cancelled" ? "danger" : "info"}`}
+                      disabled={isUpdating}
+                      onClick={() => updateStatus(order._id, status)}
+                    >
+                      {status === "cancelled" ? "Cancel" : `Mark ${status}`}
+                    </button>
+                  ))}
+
+                  {order.orderStatus === "cancelled" && (
+                    <button
+                      className="ao-pill-btn danger"
+                      onClick={() => setPendingRemove(order)}
+                      disabled={isUpdating}
+                    >
+                      Remove Order
+                    </button>
+                  )}
+
+                  <button
+                    className="ao-pill-btn neutral"
+                    onClick={() => navigate(`/admin/orders/${order._id}`)}
+                  >
+                    View Details
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+
+        {orders.length === 0 && <div className="ao-empty">No orders found</div>}
       </div>
 
-      {/* Orders Grid */}
-      <div style={{
-        display: "grid",
-        gap: "1.5rem",
-        gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))"
-      }}>
-        {orders.map((order) => {
-          console.log("📦 Admin Order Object:", order);
-          console.log("💳 Payment Method:", order.payment?.method);
-          const statusBadge = getStatusBadge(order.orderStatus);
-          const nextStatuses = getNextStatuses(order.orderStatus);
-          
-          return (
-            <div
-              key={order._id}
-              style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "1.5rem",
-                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                border: "1px solid #e5e7eb",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease"
-              }}
-            >
-              {/* Order Header */}
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                marginBottom: "1rem"
-              }}>
-                <div>
-                  <div style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "0.25rem"
-                  }}>
-                    Order ID
-                  </div>
-                  <div style={{
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    color: "#111827"
-                  }}>
-                    #{order._id?.slice(-8).toUpperCase()}
-                  </div>
-                </div>
-                
-                {/* Status Badge */}
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.375rem 0.75rem",
-                  backgroundColor: statusBadge.bgColor,
-                  color: statusBadge.color,
-                  borderRadius: "20px",
-                  fontSize: "0.875rem",
-                  fontWeight: "600"
-                }}>
-                  <span>{statusBadge.icon}</span>
-                  {statusBadge.status}
-                </div>
-              </div>
+      {pendingRemove && (
+        <div className="ao-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="ao-modal-card">
+            <p className="ao-modal-kicker">Confirm Action</p>
+            <h3>Remove cancelled order?</h3>
+            <p>
+              This will permanently remove order <strong>#{pendingRemove._id?.slice(-8).toUpperCase()}</strong>.
+            </p>
 
-              {/* Customer Info */}
-              <div style={{
-                marginBottom: "1rem",
-                padding: "1rem",
-                backgroundColor: "#f9fafb",
-                borderRadius: "8px"
-              }}>
-                <div style={{
-                  fontSize: "0.875rem",
-                  color: "#6b7280",
-                  marginBottom: "0.5rem"
-                }}>
-                  Customer
-                </div>
-                <div style={{
-                  fontSize: "1rem",
-                  fontWeight: "600",
-                  color: "#111827",
-                  marginBottom: "0.25rem"
-                }}>
-                  {order.user?.name || "Unknown Customer"}
-                </div>
-                <div style={{
-                  fontSize: "0.875rem",
-                  color: "#6b7280"
-                }}>
-                  {order.user?.email || "No email"}
-                </div>
-              </div>
-
-              {/* Order Details */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "1rem",
-                marginBottom: "1rem"
-              }}>
-                <div>
-                  <div style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "0.25rem"
-                  }}>
-                    Total Amount
-                  </div>
-                  <div style={{
-                    fontSize: "1.125rem",
-                    fontWeight: "700",
-                    color: "#111827"
-                  }}>
-                    ₹{order.priceBreakup?.totalAmount?.toLocaleString('en-IN') || "0"}
-                  </div>
-                </div>
-                
-                <div>
-                  <div style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "0.25rem"
-                  }}>
-                    Payment Method
-                  </div>
-                  <div style={{
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    color: "#111827"
-                  }}>
-                    {order.payment?.method || "N/A"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Order Date */}
-              <div style={{
-                fontSize: "0.875rem",
-                    color: "#6b7280",
-                marginBottom: "1rem"
-              }}>
-                <strong>Order Date:</strong> {formatDate(order.createdAt)}
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{
-                display: "flex",
-                gap: "0.75rem",
-                flexWrap: "wrap"
-              }}>
-                {nextStatuses.map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => {
-                      console.log("📌 Updating order status:", order._id);
-                      updateStatus(order._id, status);
-                    }}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      backgroundColor: status === "Cancelled" ? "#fee2e2" : "#dbeafe",
-                      color: status === "Cancelled" ? "#dc2626" : "#2563eb"
-                    }}
-                  >
-                    {status === "Cancelled" ? "❌ Cancel" : `✓ Mark ${status}`}
-                  </button>
-                ))}
-                
-                {/* Remove Order Button - Only for Cancelled Orders */}
-                {order.orderStatus === "cancelled" && (
-                  <button
-                    onClick={() => {
-                      console.log("🗑️ Removing order:", order._id);
-                      if (window.confirm("Are you sure you want to remove this cancelled order?")) {
-                        removeOrder(order._id);
-                      }
-                    }}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      cursor: "pointer",
-                      backgroundColor: "#fee2e2",
-                      color: "#dc2626",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    🗑️ Remove Order
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => {
-                    console.log("🔗 Navigating to order ID:", order._id);
-                    navigate(`/admin/orders/${order._id}`);
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    backgroundColor: "white",
-                    color: "#6b7280",
-                    transition: "all 0.2s ease"
-                  }}
-                >
-                  📄 View Details
-                </button>
-              </div>
+            <div className="ao-modal-actions">
+              <button
+                className="ao-pill-btn neutral"
+                onClick={() => setPendingRemove(null)}
+                disabled={removeLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="ao-pill-btn danger"
+                onClick={() => removeOrder(pendingRemove._id)}
+                disabled={removeLoading}
+              >
+                {removeLoading ? "Removing..." : "Remove"}
+              </button>
             </div>
-          );
-        })}
-      </div>
-
-      {orders.length === 0 && (
-        <div style={{
-          textAlign: "center",
-          padding: "4rem 2rem",
-          color: "#6b7280",
-          fontSize: "1.125rem"
-        }}>
-          No orders found
+          </div>
         </div>
       )}
     </div>

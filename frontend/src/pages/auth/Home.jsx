@@ -1,57 +1,43 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import FilterBar from "../../components/common/FilterBar";
 import ProductCard from "../../components/common/ProductCard";
 import API from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
-import { useSearchParams } from "react-router-dom";
 import useCart from "../../context/useCart";
+import { clearUserSession, getStoredUser } from "../../utils/authStorage";
 import Footer from "../../components/layout/Footer.jsx";
 import MidBannerSlider from "../../components/home/MidBannerSlider";
-import VideoStyleSlider from "../../components/home/VideoStyleSlider";
-import { useRef } from "react";
-import { useLocation } from "react-router-dom";
 import "../../styles/footer.css";
 
-import.meta.glob(
-  "../../assets/images/*.png",
-  { eager: true, import: "default" }
-);
-
-
+import.meta.glob("../../assets/images/*.png", { eager: true, import: "default" });
 
 function Home() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
-
-
-
   const [search, setSearch] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [metal, setMetal] = useState("");
   const [occasion, setOccasion] = useState("");
-  const [sort, setSort] = useState("featured");
+  const [sort, setSort] = useState("relevance");
   const [showAccount, setShowAccount] = useState(false);
- const accountRef = useRef(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const accountRef = useRef(null);
+  const searchRef = useRef(null);
 
-
-const [showSuggestions, setShowSuggestions] = useState(false);
-const searchRef = useRef(null);
-
-
-
-
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const storedUser = useMemo(() => getStoredUser(), [user]);
+  const displayName = user?.name || storedUser?.name || "Guest User";
+  const displayEmail = user?.email || storedUser?.email || "";
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-const categoryFromURL = params.get("category");
-
- const location = useLocation();
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const categoryFromURL = params.get("category");
+  const searchFromURL = (params.get("search") || "").trim();
+  const { totalItems } = useCart();
 
   useEffect(() => {
-    // Handle hash scrolling on page load
     if (location.hash) {
       const element = document.querySelector(location.hash);
       if (element) {
@@ -62,168 +48,151 @@ const categoryFromURL = params.get("category");
     }
   }, [location]);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (accountRef.current && !accountRef.current.contains(e.target)) {
+        setShowAccount(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-useEffect(() => {
-  const handleClickOutside = (e) => {
-    if (
-      accountRef.current &&
-      !accountRef.current.contains(e.target)
-    ) {
-      setShowAccount(false);
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setSearch(searchFromURL);
+  }, [searchFromURL]);
+
+  const buildSearchText = (product) =>
+    [
+      product?.name,
+      product?.description,
+      product?.shortDescription,
+      product?.category,
+      product?.subcategory,
+      product?.brand,
+      product?.sku,
+      product?.metal,
+      product?.purity,
+      product?.occasion,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+  const updateSearchParam = (value) => {
+    const next = new URLSearchParams(params);
+    const cleaned = String(value || "").trim();
+    if (cleaned) {
+      next.set("search", cleaned);
+    } else {
+      next.delete("search");
     }
+    setParams(next, { replace: true });
   };
 
-  document.addEventListener("mousedown", handleClickOutside);
-
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-  };
-}, []);
-
-useEffect(() => {
-  const handleClickOutside = (e) => {
-    if (searchRef.current && !searchRef.current.contains(e.target)) {
-      setShowSuggestions(false);
-    }
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    setShowSuggestions(true);
+    updateSearchParam(value);
   };
 
-  document.addEventListener("mousedown", handleClickOutside);
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const res = await API.get("/products");
+        const list = res.data;
+        setAllProducts(list);
+        setProducts(list);
 
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-  };
-}, []);
+        const categoryMap = {};
+        list.forEach((p) => {
+          if (!categoryMap[p.category]) {
+            categoryMap[p.category] = p.image;
+          }
+        });
 
- useMemo(() => {
-  if (!search.trim()) return [];
+        setCategories(
+          Object.entries(categoryMap).map(([name, image]) => ({
+            name,
+            image,
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to load products:", error);
+      }
+    };
 
-  const q = search.toLowerCase();
+    loadProducts();
+  }, []);
 
-  return products
-    .filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)
-    )
-    .slice(0, 6); // max 6 suggestions
-}, [search, products]);
-
-
-useEffect(() => {
-  const loadProducts = async () => {
-    try {
-      const res = await API.get("/products");
-      const list = res.data;
-
-      setAllProducts(list);   // ✅ MASTER COPY
-      setProducts(list);      // ✅ DISPLAY COPY
-
-      const categoryMap = {};
-      list.forEach(p => {
-        if (!categoryMap[p.category]) {
-          categoryMap[p.category] = p.image;
-        }
-      });
-
-      setCategories(
-        Object.entries(categoryMap).map(([name, image]) => ({
-          name,
-          image,
-        }))
-      );
-    } catch (error) {
-      console.error("Failed to load products:", error);
-    }
-  };
-
-  loadProducts();
-}, []);
-
-
-
-const suggestions = useMemo(() => {
-  if (!search || typeof search !== "string" || !search.trim()) {
-    return [];
-  }
-
-  const q = search.toLowerCase();
-
-  return allProducts
-    .filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)||
-      p.metal?.toLowerCase().includes(q) ||
-      p.occasion?.toLowerCase().includes(q)
-    )
-    .slice(0, 6); // max 6 suggestions
-}, [search, allProducts]);
-
-
-
-
-
-
-const filteredProducts = useMemo(() => {
-  let items = [...allProducts];
-
-  // 🔎 SEARCH
-  if (search.trim()) {
+  const suggestions = useMemo(() => {
+    if (!search || !search.trim()) return [];
     const q = search.toLowerCase();
-    items = items.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)
-    );
-  }
+    return allProducts.filter((p) => buildSearchText(p).includes(q)).slice(0, 6);
+  }, [search, allProducts]);
 
-  // 📂 CATEGORY (URL se)
-  if (categoryFromURL) {
-    items = items.filter(p => p.category === categoryFromURL);
-  }
+  const filteredProducts = useMemo(() => {
+    let items = [...allProducts];
 
-  // 💰 PRICE
-  if (priceRange) {
-    const [min, max] = priceRange.split("-").map(Number);
-    items = items.filter(p => p.price >= min && p.price <= max);
-  }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter((p) => buildSearchText(p).includes(q));
+    }
 
-  // 🪙 METAL
-  if (metal) items = items.filter(p => p.metal === metal);
+    if (categoryFromURL) {
+      const categoryQuery = categoryFromURL.toLowerCase();
+      items = items.filter((p) => p.category?.toLowerCase() === categoryQuery);
+    }
 
-  // 🎉 OCCASION
-  if (occasion) items = items.filter(p => p.occasion === occasion);
+    if (priceRange) {
+      const [min, max] = priceRange.split("-").map(Number);
+      items = items.filter((p) => p.price >= min && p.price <= max);
+    }
 
-  return items;
-}, [
-  allProducts,
-  search,
-  categoryFromURL,
-  priceRange,
-  metal,
-  occasion
-]);
+    if (metal) items = items.filter((p) => p.metal === metal);
+    if (occasion) items = items.filter((p) => p.occasion === occasion);
 
+    if (sort === "price-asc") {
+      items.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sort === "price-desc") {
+      items.sort((a, b) => (b.price || 0) - (a.price || 0));
+    } else if (sort === "popularity") {
+      items.sort((a, b) => {
+        const scoreA = (a.totalReviews || 0) * 2 + (a.averageRating || 0) + (a.isTrending ? 2 : 0);
+        const scoreB = (b.totalReviews || 0) * 2 + (b.averageRating || 0) + (b.isTrending ? 2 : 0);
+        return scoreB - scoreA;
+      });
+    }
 
+    return items;
+  }, [allProducts, search, categoryFromURL, priceRange, metal, occasion, sort]);
 
-  const featured = filteredProducts.filter(p => p.isFeatured).slice(0,6);
-  const trending = filteredProducts.filter(p => p.isTrending).slice(0,6);
-  const recommended = filteredProducts.filter(p => p.isRecommended).slice(0,6);
-
-
-  const { totalItems } = useCart();
+  const featured = filteredProducts.filter((p) => p.isFeatured).slice(0, 6);
+  const trending = filteredProducts.filter((p) => p.isTrending).slice(0, 6);
+  const recommended = filteredProducts.filter((p) => p.isRecommended).slice(0, 6);
 
   return (
     <div className="home-page">
-               {/* ===== TOP BAR ===== */}
-     <div className="top-bar">
-    <div className="top-bar-inner">
-      <span>Free Insured Shipping</span>
-      <span className="dot">•</span>
-      <span>BIS Hallmark Certified</span>
-      <span className="dot">•</span>
-      <span>Lifetime Exchange</span>
-    </div>
-  </div>
+      <div className="top-bar">
+        <div className="top-bar-inner">
+          <span>Free Insured Shipping</span>
+          <span className="dot">•</span>
+          <span>BIS Hallmark Certified</span>
+          <span className="dot">•</span>
+          <span>Lifetime Exchange</span>
+        </div>
+      </div>
 
-      {/* ===== HEADER ===== */}
       <header className="main-header">
         <div className="header-inner">
           <div className="logo">
@@ -231,104 +200,96 @@ const filteredProducts = useMemo(() => {
             <span className="logo-text">PARIVA</span>
           </div>
 
-          
-
-<nav className="nav-links">
-  <Link to="/category/rings">Rings</Link>
-  <Link to="/category/Necklaces">Necklaces</Link>
-  <Link to="/category/bracelet">Bracelets</Link>
-  <Link to="/category/pandent">Pendants</Link>
-  <Link to="/category/Earrings">Earrings</Link>
-  <Link to="/category/Bangles">Bangles</Link>
-</nav>
+          <nav className="nav-links">
+            <Link to="/category/rings">Rings</Link>
+            <Link to="/category/Necklaces">Necklaces</Link>
+            <Link to="/category/bracelet">Bracelets</Link>
+            <Link to="/category/pandent">Pendants</Link>
+            <Link to="/category/Earrings">Earrings</Link>
+            <Link to="/category/Bangles">Bangles</Link>
+          </nav>
 
           <div className="header-actions">
-            <button className="pill-button" onClick={() => navigate("/wishlist")}>Wishlist</button>
+            <button className="pill-button" onClick={() => navigate("/wishlist")}>
+              Wishlist
+            </button>
 
             <div ref={accountRef} style={{ position: "relative" }}>
-  <button
-    className="pill-button"
-    onClick={() => setShowAccount((prev) => !prev)}
-  >
-    Account
-  </button>
+              <button className="pill-button" onClick={() => setShowAccount((prev) => !prev)}>
+                Account
+              </button>
 
-  {showAccount && (
-    <div className="account-dropdown">
-      <p><strong>{user?.name}</strong></p>
-      <p>{user?.email}</p>
+              {showAccount ? (
+                <div className="account-dropdown">
+                  <p>
+                    <strong>{displayName}</strong>
+                  </p>
+                  {displayEmail ? <p>{displayEmail}</p> : null}
 
-      <hr />
+                  <hr />
 
-      <button
-        onClick={() => {
-          setShowAccount(false);
-          navigate("/account/orders");
-        }}
-      >
-        Orders
-      </button>
+                  <button
+                    onClick={() => {
+                      setShowAccount(false);
+                      navigate("/account/orders");
+                    }}
+                  >
+                    Orders
+                  </button>
 
-      <button
-        onClick={() => {
-          setShowAccount(false);
-          navigate("/account/profile");
-        }}
-      >
-        Profile
-      </button>
+                  <button
+                    onClick={() => {
+                      setShowAccount(false);
+                      navigate("/account/profile");
+                    }}
+                  >
+                    Profile
+                  </button>
 
-      <button
-        onClick={() => {
-          setShowAccount(false);
-          navigate("/account/addresses");
-        }}
-      >
-        Addresses
-      </button>
+                  <button
+                    onClick={() => {
+                      setShowAccount(false);
+                      navigate("/account/addresses");
+                    }}
+                  >
+                    Addresses
+                  </button>
 
-      <hr />
+                  <hr />
 
-      <button
-        onClick={() => {
-          localStorage.removeItem("token");
-          navigate("/login");
-          window.location.reload();
-        }}
-      >
-        Logout
-      </button>
-    </div>
-  )}
-</div>
+                  <button
+                    className="account-logout-btn"
+                    onClick={() => {
+                      logout();
+                      clearUserSession();
+                      navigate("/login");
+                      window.location.reload();
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : null}
+            </div>
 
-
-           <button
-      className="pill-button pill-accent cart-btn"
-      onClick={() => navigate("/cart")}
-    >
-      CART
-      {totalItems > 0 && (
-        <span className="cart-badge">{totalItems}</span>
-      )}
-    </button>
-
+            <button className="pill-button pill-accent cart-btn" onClick={() => navigate("/cart")}>
+              Cart
+              {totalItems > 0 ? <span className="cart-badge">{totalItems}</span> : null}
+            </button>
           </div>
         </div>
       </header>
+
       <FilterBar
         search={search}
-  onSearchChange={(val) => {
-    setSearch(val);
-    setShowSuggestions(true);
-  }}
-  showSuggestions={showSuggestions}
-  suggestions={suggestions}
-  onSuggestionClick={(value) => {
-    setSearch(value);
-    setShowSuggestions(false);
-  }}
-  searchRef={searchRef}
+        onSearchChange={handleSearchChange}
+        showSuggestions={showSuggestions}
+        suggestions={suggestions}
+        onSuggestionClick={(value) => {
+          handleSearchChange(value);
+          setShowSuggestions(false);
+        }}
+        searchRef={searchRef}
         priceRange={priceRange}
         onPriceChange={setPriceRange}
         metal={metal}
@@ -336,16 +297,12 @@ const filteredProducts = useMemo(() => {
         occasion={occasion}
         onOccasionChange={setOccasion}
         sort={sort}
-       onSortChange={setSort}
-       metals={[...new Set(products.map(p => p.metal))]}
-occasions={[...new Set(products.map(p => p.occasion))]}
-
+        onSortChange={setSort}
+        metals={[...new Set(products.map((p) => p.metal))]}
+        occasions={[...new Set(products.map((p) => p.occasion))]}
       />
-      
-      <section className="hero">
-       
 
-    
+      <section className="hero">
         <div className="hero-inner">
           <div className="hero-content">
             <p className="hero-kicker">Fine Jewellery • Crafted in India</p>
@@ -368,52 +325,19 @@ occasions={[...new Set(products.map(p => p.occasion))]}
               <span>Lifetime exchange</span>
             </div>
             <div className="hero-badge below">
-    <span className="hero-badge-title">Trusted by 50K+ customers</span>
-    <span className="hero-badge-sub">Across 120+ Indian cities</span>
-  </div>
+              <span className="hero-badge-title">Trusted by 50K+ customers</span>
+              <span className="hero-badge-sub">Across 120+ Indian cities</span>
+            </div>
           </div>
           <div className="hero-visual">
-            <div className="hero-image-placeholder">
-            
-            <div className="hero-image">< MidBannerSlider /></div>
+            <div className="hero-banner-shell">
+              <div className="hero-image-placeholder">
+                <div className="hero-image hero-image-stage">
+                <MidBannerSlider fillHeight />
+                </div>
+              </div>
             </div>
-            
           </div>
-        </div>
-      </section>
-
-      <VideoStyleSlider />
-
-      <section className="section categories" id="couples">
-        <div className="section-header">
-          <h2>Couple Collections</h2>
-          <p>Perfectly matched sets for couples who celebrate their love together</p>
-        </div>
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <button
-            onClick={() => navigate("/couples")}
-            style={{
-              padding: "1rem 2rem",
-              backgroundColor: "#d4af37",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "all 0.2s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#b8941f";
-              e.target.style.transform = "translateY(-2px)";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = "#d4af37";
-              e.target.style.transform = "translateY(0)";
-            }}
-          >
-            Explore Couple Sets
-          </button>
         </div>
       </section>
 
@@ -423,29 +347,20 @@ occasions={[...new Set(products.map(p => p.occasion))]}
           <p>Explore finely crafted pieces, curated for every mood and moment.</p>
         </div>
         <div className="category-grid">
-          {categories.length > 0 &&
-  categories.map(cat => (
-    <article 
-      key={cat.name} 
-      className="category-card"
-      onClick={() => navigate(`/category/${cat.name.toLowerCase()}`)}
-      style={{ cursor: "pointer" }}
-    >
-     <div className="category-image">
-                 <img
-  src={`http://localhost:5000/uploads/${cat.image}`}
-  alt={cat.name}
-/>
-
-
-
+          {categories.map((cat) => (
+            <article
+              key={cat.name}
+              className="category-card"
+              onClick={() => navigate(`/category/${cat.name.toLowerCase()}`)}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="category-image">
+                <img src={`http://localhost:5000/uploads/${cat.image}`} alt={cat.name} />
               </div>
               <h3>{cat.name}</h3>
               <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>
-    </article>
-))}
-
-        
+            </article>
+          ))}
         </div>
       </section>
 
@@ -456,7 +371,7 @@ occasions={[...new Set(products.map(p => p.occasion))]}
         </div>
         <div className="product-grid">
           {featured.map((p) => (
-            <ProductCard key={p._id} product={p} onAddToCart={()=>{}} />
+            <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
           ))}
         </div>
       </section>
@@ -468,8 +383,8 @@ occasions={[...new Set(products.map(p => p.occasion))]}
         </div>
         <div className="product-grid">
           {trending.map((p) => (
-               <ProductCard key={p._id} product={p} onAddToCart={()=>{}} />
-            ))}
+            <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+          ))}
         </div>
       </section>
 
@@ -480,8 +395,8 @@ occasions={[...new Set(products.map(p => p.occasion))]}
         </div>
         <div className="product-grid">
           {recommended.map((p) => (
-               <ProductCard key={p._id} product={p} onAddToCart={()=>{}} />
-            ))}
+            <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+          ))}
         </div>
       </section>
 
@@ -514,8 +429,6 @@ occasions={[...new Set(products.map(p => p.occasion))]}
         </div>
       </section>
 
-     
-
       <section className="section custom-cta" id="custom">
         <div className="custom-cta-inner">
           <div className="custom-cta-text">
@@ -525,17 +438,19 @@ occasions={[...new Set(products.map(p => p.occasion))]}
               while watching the estimate adapt in real time.
             </p>
           </div>
-        
 
-<Link to="/custom-design" className="hero-cta primary-cta">
-  Open Custom Studio
-</Link>
-
+          <div className="custom-cta-actions">
+            <Link to="/custom-design" className="hero-cta primary-cta">
+              Open Custom Studio
+            </Link>
+            <Link to="/my-custom-designs" className="hero-cta ghost-cta">
+              My Custom Requests
+            </Link>
+          </div>
         </div>
       </section>
 
-
-        <Footer />
+      <Footer />
     </div>
   );
 }

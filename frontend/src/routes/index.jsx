@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import UserLogin from "../pages/auth/UserLogin";
 import UserRegister from "../pages/auth/UserRegister";
@@ -33,7 +33,9 @@ import OrderTracking from "../pages/account/OrderTracking";
 import AccountLayout from "../pages/account/AccountLayout";
 import Profile from "../pages/account/Profile";
 import Orders from "../pages/account/Orders";
+import OrderDetails from "../pages/account/OrderDetails";
 import Addresses from "../pages/account/Addresses";
+import MyFeedback from "../pages/account/MyFeedback";
 import Checkout from "../pages/checkout/Checkout";
 import Wishlist from "../pages/Wishlist";
 
@@ -41,13 +43,27 @@ import CategoryListing from "../pages/category/CategoryListing";
 import ProductDetail from "../pages/product/ProductDetail";
 
 import AdminRoute from "./AdminRoute";
+import AdminLayout from "../admin/components/AdminLayout";
+import { useAuth } from "../context/AuthContext";
+import { getUserToken, migrateLegacyUserSession } from "../utils/authStorage";
 
 export default function AppRoutes() {
+  const { user } = useAuth();
+  migrateLegacyUserSession();
+  const adminToken = sessionStorage.getItem("adminToken");
+  const userToken = getUserToken() || (user ? "session" : null);
+
+  const loginLanding = adminToken
+    ? <Navigate to="/admin/dashboard" replace />
+    : userToken
+      ? <Navigate to="/home" replace />
+      : <UserLogin />;
+
   return (
     <Routes>
       {/* ================= USER (PUBLIC) ================= */}
-      <Route path="/" element={<UserLogin />} />
-      <Route path="/login" element={<UserLogin />} />
+      <Route path="/" element={loginLanding} />
+      <Route path="/login" element={loginLanding} />
       <Route path="/register" element={<UserRegister />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -77,17 +93,28 @@ export default function AppRoutes() {
         path="/admin/dashboard"
         element={
           <AdminRoute>
-            <AdminDashboard />
+            <AdminLayout>
+              <AdminDashboard />
+            </AdminLayout>
           </AdminRoute>
         }
       />
 
-      <Route path="/account" element={<AccountLayout />}>
-        <Route index element={<Profile />} />
+      <Route
+        path="/account"
+        element={
+          <UserRoute>
+            <AccountLayout />
+          </UserRoute>
+        }
+      >
+        <Route index element={<Navigate to="/account/profile" replace />} />
         <Route path="profile" element={<Profile />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="orders/:id" element={<OrderDetails />} />
         <Route path="orders/tracking/:id" element={<OrderTracking />} />
         <Route path="addresses" element={<Addresses />} />
+        <Route path="feedback" element={<MyFeedback />} />
       </Route>
 
       <Route path="/wishlist" element={<Wishlist />} />
@@ -105,9 +132,7 @@ export default function AppRoutes() {
       <Route
         path="/custom-design"
         element={
-          <UserRoute>
-            <CustomDesignForm />
-          </UserRoute>
+          <CustomDesignForm />
         }
       />
 <Route path="/customer-service" element={<CustomerServicePage />} />
@@ -116,7 +141,9 @@ export default function AppRoutes() {
         path="/admin/banners"
         element={
           <AdminRoute>
-            <BannerManager />
+            <AdminLayout>
+              <BannerManager />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -125,7 +152,9 @@ export default function AppRoutes() {
         path="/admin/banners/add"
         element={
           <AdminRoute>
-            <AddBanner />
+            <AdminLayout>
+              <AddBanner />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -134,7 +163,9 @@ export default function AppRoutes() {
         path="/admin/custom-design"
         element={
           <AdminRoute>
-            <AdminCustomDesigns />
+            <AdminLayout>
+              <AdminCustomDesigns />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -152,7 +183,9 @@ export default function AppRoutes() {
         path="/admin/coupons"
         element={
           <AdminRoute>
-            <AdminCoupons />
+            <AdminLayout>
+              <AdminCoupons />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -161,7 +194,9 @@ export default function AppRoutes() {
         path="/admin/users"
         element={
           <AdminRoute>
-            <AdminUsers />
+            <AdminLayout>
+              <AdminUsers />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -170,7 +205,9 @@ export default function AppRoutes() {
         path="/admin/orders"
         element={
           <AdminRoute>
-            <AdminOrders />
+            <AdminLayout>
+              <AdminOrders />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -179,7 +216,9 @@ export default function AppRoutes() {
         path="/admin/orders/:id"
         element={
           <AdminRoute>
-            <AdminOrderDetails />
+            <AdminLayout>
+              <AdminOrderDetails />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -188,7 +227,9 @@ export default function AppRoutes() {
         path="/admin/reviews"
         element={
           <AdminRoute>
-            <ReviewManagement />
+            <AdminLayout>
+              <ReviewManagement />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -197,7 +238,9 @@ export default function AppRoutes() {
         path="/admin/products"
         element={
           <AdminRoute>
-            <ProductList />
+            <AdminLayout>
+              <ProductList />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -206,7 +249,9 @@ export default function AppRoutes() {
         path="/admin/products/add"
         element={
           <AdminRoute>
-            <AddProduct />
+            <AdminLayout>
+              <AddProduct />
+            </AdminLayout>
           </AdminRoute>
         }
       />
@@ -215,7 +260,9 @@ export default function AppRoutes() {
         path="/admin/products/edit/:id"
         element={
           <AdminRoute>
-            <EditProduct />
+            <AdminLayout>
+              <EditProduct />
+            </AdminLayout>
           </AdminRoute>
         }
       />

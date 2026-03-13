@@ -60,6 +60,7 @@ import adminUserRoutes from "./routes/adminUserRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 /* ================================
    ROUTES
@@ -93,6 +94,9 @@ app.use("/api/payment", paymentRoutes);
 
 // Reviews
 app.use("/api/reviews", reviewRoutes);
+
+// Upload
+app.use("/api/upload", uploadRoutes);
 
 // Other APIs
 app.use("/api", bannerRoutes);

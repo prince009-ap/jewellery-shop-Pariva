@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import API from "../services/api";
 import { CartContext } from "./CartContext";
+import { useAuth } from "./AuthContext";
+import { getUserToken } from "../utils/authStorage";
 
 export const CartProvider = ({ children }) => {
+  const { token } = useAuth();
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 // 🔐 remove invalid items
@@ -21,19 +24,21 @@ const safeCart = cart.filter(item => item.product);
   }, []);
 
  useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (token) {
+  const activeToken = token || getUserToken();
+  if (activeToken) {
+    setLoading(true);
     fetchCart();
   } else {
+    setCart([]);
     setLoading(false);
   }
-}, [fetchCart]);
+}, [fetchCart, token]);
 
 
 
 const addToCart = async (productId, qty = 1) => {
-  const token = localStorage.getItem("token");
-  if (!token) {
+  const activeToken = token || getUserToken();
+  if (!activeToken) {
     alert("Please login to add items to cart");
     return;
   }

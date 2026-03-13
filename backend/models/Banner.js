@@ -11,6 +11,19 @@ const bannerSchema = new mongoose.Schema(
 
     buttonText: { type: String },
     link: { type: String },
+    targetType: {
+      type: String,
+      enum: ["global", "category"],
+      default: "global",
+    },
+    targetValue: { type: String, default: "" },
+    audienceType: {
+      type: String,
+      enum: ["all", "before_first_order"],
+      default: "all",
+    },
+    startAt: { type: Date, default: null },
+    endAt: { type: Date, default: null },
 
     isActive: { type: Boolean, default: true }
   },

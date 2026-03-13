@@ -8,7 +8,10 @@ export const protect = (req, res, next) => {
       ? header.split(" ")[1]
       : req.cookies?.token;
 
-    if (!token) return res.status(401).json({ message: "Not logged in" });
+    // Guard against malformed/empty tokens (e.g., "null" or "undefined")
+    if (!token || token === "null" || token === "undefined") {
+      return res.status(401).json({ message: "Not logged in" });
+    }
 
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();

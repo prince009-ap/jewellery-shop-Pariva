@@ -1,29 +1,23 @@
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
-import { useEffect } from "react";
 
-/* Helper component to control map */
 function MapController({ position, accuracy }) {
   const map = useMap();
   const circleRef = useRef(null);
 
-  // map center
   useEffect(() => {
     map.setView(position, 16, { animate: true });
   }, [map, position]);
 
-  // accuracy circle
   useEffect(() => {
     if (!accuracy) return;
 
-    // remove old circle
     if (circleRef.current) {
       map.removeLayer(circleRef.current);
     }
 
-    // add new circle
     circleRef.current = L.circle(position, {
       radius: accuracy,
       color: "#2563eb",
@@ -31,7 +25,6 @@ function MapController({ position, accuracy }) {
       fillOpacity: 0.15,
     }).addTo(map);
 
-    // cleanup on unmount
     return () => {
       if (circleRef.current) {
         map.removeLayer(circleRef.current);
@@ -41,44 +34,104 @@ function MapController({ position, accuracy }) {
 
   return null;
 }
+
 export default function MapModal({ onClose, onSelect }) {
-  const [position, setPosition] = useState([21.1702, 72.8311]); // Surat
+  const [position, setPosition] = useState([21.1702, 72.8311]);
   const [accuracy, setAccuracy] = useState(null);
   const [query, setQuery] = useState("");
+  const [mapMessage, setMapMessage] = useState("");
+  const [mapMessageType, setMapMessageType] = useState("info");
 
-  /* 🔍 Search place */
-  const searchPlace = async () => {
-    if (!query) return;
-
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
-    );
-    const data = await res.json();
-    if (!data[0]) return alert("Place not found");
-
-    const lat = Number(data[0].lat);
-    const lon = Number(data[0].lon);
-
-    setPosition([lat, lon]);
-    setAccuracy(null);
+  const setStatusMessage = (message, type = "info") => {
+    setMapMessage(message);
+    setMapMessageType(type);
   };
 
-  /* 📍 Current location */
+  const isGujaratAddress = (address = {}) => {
+    const stateText = [
+      address.state,
+      address.state_district,
+      address.region,
+      address.county,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return stateText.includes("gujarat");
+  };
+
+  const reverseLookup = async (lat, lng) => {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+    return res.json();
+  };
+
+  const searchPlace = async () => {
+    if (!query.trim()) {
+      setStatusMessage("Search for an area, society, or place in Gujarat.", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
+      );
+      const data = await res.json();
+
+      if (!data[0]) {
+        setStatusMessage("Place not found. Try a nearby Gujarat location.", "error");
+        return;
+      }
+
+      const lat = Number(data[0].lat);
+      const lon = Number(data[0].lon);
+      const reverseData = await reverseLookup(lat, lon);
+
+      if (!isGujaratAddress(reverseData.address)) {
+        setStatusMessage("Out of Gujarat locations are not available.", "error");
+        return;
+      }
+
+      setPosition([lat, lon]);
+      setAccuracy(null);
+      setStatusMessage("Gujarat location found. You can use this location now.", "success");
+    } catch (error) {
+      console.error("Location search failed:", error);
+      setStatusMessage("Unable to search this location right now.", "error");
+    }
+  };
+
   const currentLocation = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation not supported");
+      setStatusMessage("Geolocation is not supported on this device.", "error");
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      (p) => {
-        const { latitude, longitude, accuracy } = p.coords;
-        setPosition([latitude, longitude]);
-        setAccuracy(accuracy);
+      async (coords) => {
+        const { latitude, longitude, accuracy: locationAccuracy } = coords.coords;
+
+        try {
+          const reverseData = await reverseLookup(latitude, longitude);
+
+          if (!isGujaratAddress(reverseData.address)) {
+            setStatusMessage("Out of Gujarat locations are not available.", "error");
+            return;
+          }
+
+          setPosition([latitude, longitude]);
+          setAccuracy(locationAccuracy);
+          setStatusMessage("Current Gujarat location selected.", "success");
+        } catch (error) {
+          console.error("Current location lookup failed:", error);
+          setStatusMessage("Unable to verify your current location.", "error");
+        }
       },
-      (err) => {
-        alert("Failed to get location");
-        console.error(err);
+      (error) => {
+        console.error(error);
+        setStatusMessage("Failed to get current location.", "error");
       },
       {
         enableHighAccuracy: true,
@@ -86,53 +139,62 @@ export default function MapModal({ onClose, onSelect }) {
       }
     );
   };
+
   const useLocation = async () => {
-  const lat = position[0];
-  const lng = position[1];
+    const [lat, lng] = position;
 
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-  );
-  const data = await res.json();
+    try {
+      const data = await reverseLookup(lat, lng);
 
-  onSelect({
-    lat,
-    lng,
-    display_name: data.display_name,
-    address: data.address,
-  });
+      if (!isGujaratAddress(data.address)) {
+        setStatusMessage("Out of Gujarat locations are not available.", "error");
+        return;
+      }
 
-  onClose();
-};
+      onSelect({
+        lat,
+        lng,
+        display_name: data.display_name,
+        address: data.address,
+      });
 
+      onClose();
+    } catch (error) {
+      console.error("Use location failed:", error);
+      setStatusMessage("Unable to use this location right now.", "error");
+    }
+  };
 
   return (
     <div className="map-modal">
-      <div className="map-top">
-        <input
-          placeholder="Search area / society / place"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <button onClick={searchPlace}>Search</button>
-        <button onClick={currentLocation}>📍 Current</button>
-        <button onClick={onClose}>✖</button>
+      <div className="map-modal__card">
+        <div className="map-top">
+          <input
+            placeholder="Search area / society / place"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button type="button" onClick={searchPlace}>Search</button>
+          <button type="button" onClick={currentLocation}>Current</button>
+          <button type="button" onClick={onClose}>Close</button>
+        </div>
+
+        {mapMessage ? (
+          <div className={`map-inline-message ${mapMessageType}`}>{mapMessage}</div>
+        ) : null}
+
+        <MapContainer center={position} zoom={16} style={{ height: "400px", width: "100%" }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <Marker position={position} />
+          <MapController position={position} accuracy={accuracy} />
+        </MapContainer>
+
+        <div className="map-modal__actions">
+          <button className="use-location-btn" type="button" onClick={useLocation}>
+            Use this location
+          </button>
+        </div>
       </div>
-
-      <MapContainer
-        center={position}
-        zoom={16}
-        style={{ height: "400px", width: "100%" }}
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <Marker position={position} />
-        <MapController position={position} accuracy={accuracy} />
-      </MapContainer>
-
-      <button className="use-location-btn" onClick={useLocation}>
-  Use this location
-</button>
-
     </div>
   );
 }
