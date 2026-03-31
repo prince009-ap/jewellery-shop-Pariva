@@ -1,5 +1,6 @@
 // src/components/common/FilterBar.js
 import React from "react";
+import SelectDropdown from "./SelectDropdown";
 
 const PRICE_RANGES = [
   { label: "Any", value: "" },
@@ -81,56 +82,35 @@ function FilterBar({
 
         <div className="filters-group">
           <FilterPill label="Price">
-            <div className="select-shell">
-              <select
-                value={priceRange}
-                onChange={(e) => onPriceChange(e.target.value)}
-              >
-                {PRICE_RANGES.map((range) => (
-                  <option key={range.label} value={range.value}>
-                    {range.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectDropdown
+              value={priceRange}
+              onChange={(e) => onPriceChange(e.target.value)}
+              options={PRICE_RANGES.map((range) => ({ value: range.value, label: range.label }))}
+              placeholder="Any"
+            />
           </FilterPill>
           <FilterPill label="Metal">
-            <div className="select-shell">
-              <select value={metal} onChange={(e) => onMetalChange(e.target.value)}>
-                <option value="">Any</option>
-                {metals.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectDropdown
+              value={metal}
+              onChange={(e) => onMetalChange(e.target.value)}
+              options={[{ value: "", label: "Any" }, ...metals.map((m) => ({ value: m, label: m }))]}
+              placeholder="Any"
+            />
           </FilterPill>
           <FilterPill label="Occasion">
-            <div className="select-shell">
-              <select
-                value={occasion}
-                onChange={(e) => onOccasionChange(e.target.value)}
-              >
-                <option value="">Any</option>
-                {occasions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectDropdown
+              value={occasion}
+              onChange={(e) => onOccasionChange(e.target.value)}
+              options={[{ value: "", label: "Any" }, ...occasions.map((o) => ({ value: o, label: o }))]}
+              placeholder="Any"
+            />
           </FilterPill>
           <FilterPill label="Sort">
-            <div className="select-shell">
-              <select value={sort} onChange={(e) => onSortChange(e.target.value)}>
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectDropdown
+              value={sort}
+              onChange={(e) => onSortChange(e.target.value)}
+              options={SORT_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
+            />
           </FilterPill>
         </div>
       </div>

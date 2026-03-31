@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import "./AdminOrderDetails.css";
 
@@ -303,9 +304,8 @@ function AdminOrderDetails() {
 
           <div className="aod-form-block">
             <label htmlFor="order-status">Update Order Status</label>
-            <select
+            <SelectDropdown
               id="order-status"
-              className="aod-field"
               value={order.orderStatus}
               onChange={(e) => {
                 const nextStatus = e.target.value;
@@ -316,13 +316,12 @@ function AdminOrderDetails() {
                 updateStatus(nextStatus);
               }}
               disabled={updatingStatus || isFinalStatus}
-            >
-              {ORDER_STATUSES.map((status) => (
-                <option key={status} value={status} disabled={!allowedStatuses.includes(status)}>
-                  {toTitle(status)}
-                </option>
-              ))}
-            </select>
+              options={ORDER_STATUSES.filter((status) => allowedStatuses.includes(status)).map((status) => ({
+                value: status,
+                label: toTitle(status),
+              }))}
+              className="aod-field"
+            />
             {updatingStatus && (
               <div className="aod-updating">
                 <div className="loading-spinner loading-spinner-small"></div>
@@ -350,16 +349,17 @@ function AdminOrderDetails() {
                 onChange={(e) => setTracking({ ...tracking, trackingId: e.target.value })}
               />
             </div>
-            <select
+            <SelectDropdown
               className="aod-field"
               value={tracking.status}
               onChange={(e) => setTracking({ ...tracking, status: e.target.value })}
-            >
-              <option value="Order Placed">Order Placed</option>
-              <option value="In Transit">In Transit</option>
-              <option value="Out for Delivery">Out for Delivery</option>
-              <option value="Delivered">Delivered</option>
-            </select>
+              options={[
+                "Order Placed",
+                "In Transit",
+                "Out for Delivery",
+                "Delivered",
+              ]}
+            />
 
             <button type="button" className="aod-btn aod-btn-primary" onClick={saveTracking}>
               Save Tracking Information

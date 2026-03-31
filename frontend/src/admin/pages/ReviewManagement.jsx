@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import "./BannerManager.css";
 import "./ReviewManagement.css";
@@ -143,24 +144,37 @@ const ReviewManagement = () => {
             <div className="review-filter-row">
               <div className="review-sort-wrap">
                 <label htmlFor="review-sort">Sort By</label>
-                <select id="review-sort" name="sortBy" value={filter.sortBy} onChange={handleFilterChange}>
-                  <option value="latest">Latest Reviews</option>
-                  <option value="oldest">Oldest Reviews</option>
-                  <option value="rating_high">Rating High-Low</option>
-                  <option value="rating_low">Rating Low-High</option>
-                </select>
+                <SelectDropdown
+                  id="review-sort"
+                  name="sortBy"
+                  value={filter.sortBy}
+                  onChange={handleFilterChange}
+                  options={[
+                    { value: "latest", label: "Latest Reviews" },
+                    { value: "oldest", label: "Oldest Reviews" },
+                    { value: "rating_high", label: "Rating High-Low" },
+                    { value: "rating_low", label: "Rating Low-High" },
+                  ]}
+                />
               </div>
 
               <div className="review-sort-wrap">
                 <label htmlFor="review-rating">Rating</label>
-                <select id="review-rating" name="rating" value={filter.rating} onChange={handleFilterChange}>
-                  <option value="">All Ratings</option>
-                  <option value="5">5 Stars</option>
-                  <option value="4">4 Stars</option>
-                  <option value="3">3 Stars</option>
-                  <option value="2">2 Stars</option>
-                  <option value="1">1 Star</option>
-                </select>
+                <SelectDropdown
+                  id="review-rating"
+                  name="rating"
+                  value={filter.rating}
+                  onChange={handleFilterChange}
+                  options={[
+                    { value: "", label: "All Ratings" },
+                    { value: "5", label: "5 Stars" },
+                    { value: "4", label: "4 Stars" },
+                    { value: "3", label: "3 Stars" },
+                    { value: "2", label: "2 Stars" },
+                    { value: "1", label: "1 Star" },
+                  ]}
+                  placeholder="All Ratings"
+                />
               </div>
 
               <div className="review-input-wrap">

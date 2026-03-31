@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import "./AdminOrders.css";
 
@@ -175,14 +176,19 @@ function AdminOrders() {
         <section className="ao-topbar-card">
           <div className="ao-sort-wrap">
             <label htmlFor="order-sort">Sort By</label>
-            <select id="order-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="latest">Latest Orders</option>
-              <option value="oldest">Oldest Orders</option>
-              <option value="amount_high">Amount High-Low</option>
-              <option value="amount_low">Amount Low-High</option>
-              <option value="status">Status A-Z</option>
-              <option value="payment">Payment Method A-Z</option>
-            </select>
+            <SelectDropdown
+              id="order-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              options={[
+                { value: "latest", label: "Latest Orders" },
+                { value: "oldest", label: "Oldest Orders" },
+                { value: "amount_high", label: "Amount High-Low" },
+                { value: "amount_low", label: "Amount Low-High" },
+                { value: "status", label: "Status A-Z" },
+                { value: "payment", label: "Payment Method A-Z" },
+              ]}
+            />
           </div>
         </section>
 

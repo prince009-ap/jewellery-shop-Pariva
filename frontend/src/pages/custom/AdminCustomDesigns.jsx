@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import DesignModal from "./DesignModal";
 import "./AdminCustomDesigns.css";
@@ -114,16 +115,17 @@ export default function AdminCustomDesigns() {
         <section className="acd-topbar-card">
           <div className="acd-sort-wrap">
             <label htmlFor="custom-design-sort">Sort By</label>
-            <select
+            <SelectDropdown
               id="custom-design-sort"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="latest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="status">Status A-Z</option>
-              <option value="jewellery">Jewellery A-Z</option>
-            </select>
+              options={[
+                { value: "latest", label: "Newest First" },
+                { value: "oldest", label: "Oldest First" },
+                { value: "status", label: "Status A-Z" },
+                { value: "jewellery", label: "Jewellery A-Z" },
+              ]}
+            />
           </div>
         </section>
 

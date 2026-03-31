@@ -167,6 +167,18 @@
   font-weight: bold;
   z-index: 1;
   position: relative;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
 }
 
 /* Footer Links */
@@ -231,16 +243,25 @@
   transition: all 0.2s ease;
 }
 
+.contact-link {
+  text-decoration: none;
+  color: inherit;
+}
+
 .contact-item:hover {
   background: rgba(212, 175, 55, 0.1);
   transform: translateY(-2px);
 }
 
 .contact-icon {
-  font-size: 1.1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: #d4af37;
-  min-width: 20px;
+  min-width: 44px;
   text-align: center;
+  padding-top: 0.25rem;
 }
 
 .contact-text {
@@ -394,6 +415,82 @@
   color: #e74c3c;
   font-size: 1rem;
   animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.info-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fffdf8 0%, #f7f1e4 55%, #eff5f7 100%);
+  color: #344a61;
+  padding: 48px 20px 72px;
+}
+
+.info-page-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.info-page-kicker {
+  margin: 0 0 10px;
+  color: #b89024;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.info-page h1 {
+  margin: 0 0 14px;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  color: #193458;
+}
+
+.info-page-lead {
+  max-width: 760px;
+  margin: 0 0 32px;
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.info-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(25, 52, 88, 0.08);
+}
+
+.info-card h2 {
+  margin: 0 0 12px;
+  color: #193458;
+  font-size: 1.2rem;
+}
+
+.info-card p {
+  margin: 0 0 12px;
+  line-height: 1.7;
+}
+
+.info-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-link,
+.info-inline-link {
+  color: #4f6782;
+  text-decoration: none;
+}
+
+.info-link:hover,
+.info-inline-link:hover {
+  color: #b89024;
 }
 
 @keyframes heartbeat {

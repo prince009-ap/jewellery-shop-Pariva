@@ -115,14 +115,27 @@
 
 .sortSelect,
 .filterSelect {
+  width: 100%;
+}
+
+.sortSelect :global(.select-dropdown-shell),
+.filterSelect :global(.select-dropdown-shell) {
   min-height: 42px;
   border-radius: 999px;
-  border: 1px solid #d9c9aa;
+  border-color: #d9c9aa;
   background: linear-gradient(180deg, #fffefb 0%, #f6efdf 100%);
-  padding: 0 16px;
-  color: #4b5d74;
+}
+
+.sortSelect :global(.select-dropdown-value),
+.filterSelect :global(.select-dropdown-value) {
+  min-height: 42px;
   font-size: 0.88rem;
-  outline: none;
+  color: #4b5d74;
+}
+
+.sortSelect :global(.select-dropdown-toggle),
+.filterSelect :global(.select-dropdown-toggle) {
+  background: rgba(212, 175, 55, 0.1);
 }
 
 .mainGrid {
@@ -166,6 +179,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  max-height: 132px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .sidebar {
@@ -299,6 +315,17 @@
   color: #53657c;
   font-size: 0.85rem;
   cursor: pointer;
+  padding: 6px 10px;
+  border: 1px solid #e3e8ef;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.filterCheckboxLabel:hover {
+  border-color: #d0b268;
+  background: linear-gradient(180deg, #fffdf8 0%, #f7f0de 100%);
+  transform: translateY(-1px);
 }
 
 .filterCheckbox {

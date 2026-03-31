@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import "./AddBanner.css";
 
@@ -109,10 +110,15 @@ export default function AddBanner() {
 
             <div className="field-group">
               <label>Banner Target</label>
-              <select value={targetType} onChange={(e) => setTargetType(e.target.value)}>
-                <option value="global">Homepage Global</option>
-                <option value="category">Specific Category</option>
-              </select>
+              <SelectDropdown
+                value={targetType}
+                onChange={(e) => setTargetType(e.target.value)}
+                options={[
+                  { value: "global", label: "Homepage Global" },
+                  { value: "category", label: "Specific Category" },
+                ]}
+                placeholder="Select banner target"
+              />
             </div>
 
             <div className="field-group">
@@ -127,10 +133,15 @@ export default function AddBanner() {
 
             <div className="field-group">
               <label>Visible For</label>
-              <select value={audienceType} onChange={(e) => setAudienceType(e.target.value)}>
-                <option value="all">All Users</option>
-                <option value="before_first_order">Only Before First Order</option>
-              </select>
+              <SelectDropdown
+                value={audienceType}
+                onChange={(e) => setAudienceType(e.target.value)}
+                options={[
+                  { value: "all", label: "All Users" },
+                  { value: "before_first_order", label: "Only Before First Order" },
+                ]}
+                placeholder="Select audience"
+              />
             </div>
 
             <div className="field-group">

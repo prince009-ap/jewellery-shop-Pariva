@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
+import {
+  METAL_TYPES,
+  OCCASION_TYPES,
+  PRODUCT_CATEGORIES,
+  PURITY_OPTIONS,
+} from "../../constants/productOptions";
 import "./AddProducts.css";
 
 function AddProduct() {
@@ -58,6 +65,11 @@ function AddProduct() {
   const submitHandler = async (e) => {
     e.preventDefault();
     if (submitting) return;
+
+    if (!form.name || !form.price || !form.category || !form.metal || !form.occasion || !form.sku || !form.weight || !form.purity) {
+      alert("Please fill all required product details");
+      return;
+    }
 
     if (!form.image) {
       alert("Please select a product image");
@@ -139,41 +151,36 @@ function AddProduct() {
 
               <div className="field-group">
                 <label>Category *</label>
-                <select name="category" value={form.category} onChange={handleChange} required>
-                  <option value="">Select category</option>
-                  <option value="Rings">Rings</option>
-                  <option value="Necklaces">Necklaces</option>
-                  <option value="Earrings">Earrings</option>
-                  <option value="Bracelets">Bracelets</option>
-                  <option value="Pendants">Pendants</option>
-                  <option value="Bangles">Bangles</option>
-                  <option value="Chains">Chains</option>
-                </select>
+                <SelectDropdown
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  options={PRODUCT_CATEGORIES}
+                  placeholder="Select or type category"
+                  searchable
+                />
               </div>
 
               <div className="field-group">
                 <label>Metal Type *</label>
-                <select name="metal" value={form.metal} onChange={handleChange} required>
-                  <option value="">Select metal</option>
-                  <option value="Gold">Gold</option>
-                  <option value="Silver">Silver</option>
-                  <option value="Platinum">Platinum</option>
-                  <option value="Rose Gold">Rose Gold</option>
-                  <option value="White Gold">White Gold</option>
-                </select>
+                <SelectDropdown
+                  name="metal"
+                  value={form.metal}
+                  onChange={handleChange}
+                  options={METAL_TYPES}
+                  placeholder="Select metal"
+                />
               </div>
 
               <div className="field-group">
                 <label>Occasion *</label>
-                <select name="occasion" value={form.occasion} onChange={handleChange} required>
-                  <option value="">Select occasion</option>
-                  <option value="Wedding">Wedding</option>
-                  <option value="Daily">Daily Wear</option>
-                  <option value="Party">Party</option>
-                  <option value="Festive">Festive</option>
-                  <option value="Office">Office</option>
-                  <option value="Casual">Casual</option>
-                </select>
+                <SelectDropdown
+                  name="occasion"
+                  value={form.occasion}
+                  onChange={handleChange}
+                  options={OCCASION_TYPES}
+                  placeholder="Select occasion"
+                />
               </div>
 
               <div className="field-group">
@@ -215,18 +222,13 @@ function AddProduct() {
 
               <div className="field-group">
                 <label>Purity *</label>
-                <select name="purity" value={form.purity} onChange={handleChange} required>
-                  <option value="">Select purity</option>
-                  <option value="24K">24K (99.9%)</option>
-                  <option value="22K">22K (91.6%)</option>
-                  <option value="18K">18K (75%)</option>
-                  <option value="14K">14K (58.5%)</option>
-                  <option value="925">925 Sterling Silver</option>
-                  <option value="950">950 Silver</option>
-                  <option value="999">999 Fine Silver</option>
-                  <option value="950">950 Platinum</option>
-                  <option value="900">900 Platinum</option>
-                </select>
+                <SelectDropdown
+                  name="purity"
+                  value={form.purity}
+                  onChange={handleChange}
+                  options={PURITY_OPTIONS}
+                  placeholder="Select purity"
+                />
               </div>
 
               <div className="field-group full-span">

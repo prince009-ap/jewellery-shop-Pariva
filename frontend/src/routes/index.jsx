@@ -41,6 +41,9 @@ import Wishlist from "../pages/Wishlist";
 
 import CategoryListing from "../pages/category/CategoryListing";
 import ProductDetail from "../pages/product/ProductDetail";
+import SitemapPage from "../pages/info/SitemapPage";
+import CareersPage from "../pages/info/CareersPage";
+import BlogPage from "../pages/info/BlogPage";
 
 import AdminRoute from "./AdminRoute";
 import AdminLayout from "../admin/components/AdminLayout";
@@ -135,8 +138,11 @@ export default function AppRoutes() {
           <CustomDesignForm />
         }
       />
-<Route path="/customer-service" element={<CustomerServicePage />} />
-<Route path="/quick-links" element={<QuickLinksPage />} />
+      <Route path="/customer-service" element={<CustomerServicePage />} />
+      <Route path="/quick-links" element={<QuickLinksPage />} />
+      <Route path="/sitemap" element={<SitemapPage />} />
+      <Route path="/careers" element={<CareersPage />} />
+      <Route path="/blog" element={<BlogPage />} />
       <Route
         path="/admin/banners"
         element={

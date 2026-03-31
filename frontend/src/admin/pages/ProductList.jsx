@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import "./ProductList.css";
 
@@ -109,20 +110,21 @@ function ProductList() {
             <div className="table-count">Total Products: {products.length}</div>
             <div className="sort-wrap">
               <label htmlFor="product-sort">Sort By</label>
-              <select
+              <SelectDropdown
                 id="product-sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="latest">Latest Added</option>
-                <option value="oldest">Oldest Added</option>
-                <option value="name_asc">Name A-Z</option>
-                <option value="name_desc">Name Z-A</option>
-                <option value="price_low">Price Low-High</option>
-                <option value="price_high">Price High-Low</option>
-                <option value="metal_asc">Metal A-Z</option>
-                <option value="metal_desc">Metal Z-A</option>
-              </select>
+                options={[
+                  { value: "latest", label: "Latest Added" },
+                  { value: "oldest", label: "Oldest Added" },
+                  { value: "name_asc", label: "Name A-Z" },
+                  { value: "name_desc", label: "Name Z-A" },
+                  { value: "price_low", label: "Price Low-High" },
+                  { value: "price_high", label: "Price High-Low" },
+                  { value: "metal_asc", label: "Metal A-Z" },
+                  { value: "metal_desc", label: "Metal Z-A" },
+                ]}
+              />
             </div>
           </div>
           <div className="product-table-wrap">

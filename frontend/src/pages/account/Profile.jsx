@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import API from "../../services/api";
 
 export default function Profile() {
@@ -261,23 +262,18 @@ export default function Profile() {
                 Gender
               </label>
               {isEditing ? (
-                <select
+                <SelectDropdown
                   name="gender"
                   value={editForm.gender}
                   onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem"
-                  }}
-                >
-                  <option value="">Select Gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
+                  options={[
+                    { value: "", label: "Select Gender" },
+                    { value: "male", label: "Male" },
+                    { value: "female", label: "Female" },
+                    { value: "other", label: "Other" },
+                  ]}
+                  placeholder="Select Gender"
+                />
               ) : (
                 <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
                   {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : "N/A"}

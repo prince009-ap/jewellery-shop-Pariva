@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import API from "../../services/api";
 import "../auth.css";
 
@@ -21,6 +22,10 @@ function UserRegister() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!form.gender) {
+      setError("Please select your gender");
+      return;
+    }
     try {
       const payload = {
         name: form.name.trim(),
@@ -83,12 +88,17 @@ function UserRegister() {
 
           <div className="auth-field">
             <label>Gender</label>
-            <select name="gender" onChange={handleChange} required>
-              <option value="">Select</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
+            <SelectDropdown
+              name="gender"
+              value={form.gender}
+              onChange={handleChange}
+              options={[
+                { value: "male", label: "Male" },
+                { value: "female", label: "Female" },
+                { value: "other", label: "Other" },
+              ]}
+              placeholder="Select"
+            />
           </div>
 
           {error && <div className="auth-error">{error}</div>}

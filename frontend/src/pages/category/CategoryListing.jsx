@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import SelectDropdown from "../../components/common/SelectDropdown";
 import API from "../../services/api";
 import useCart from "../../context/useCart";
 import QuantitySelector from "../../components/common/QuantitySelector";
@@ -36,6 +37,16 @@ export default function CategoryListing() {
   });
   const [priceRange, setPriceRange] = useState([0, 2000000]);
   const [weightRange, setWeightRange] = useState([0, 100]);
+
+  const metalOptions = [...new Set(products.map((product) => product.metal).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const purityOptions = [...new Set(products.map((product) => product.purity).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const occasionOptions = [...new Set(products.map((product) => product.occasion).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b)
+  );
 
   const fetchCategoryProducts = useCallback(async () => {
     try {
@@ -202,14 +213,19 @@ export default function CategoryListing() {
           </div>
           <div className={styles.metaCard}>
             <span>Sort</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles.sortSelect}>
-              <option value="newest">Newest First</option>
-              <option value="price_low_high">Price: Low to High</option>
-              <option value="price_high_low">Price: High to Low</option>
-              <option value="popular">Popular</option>
-              <option value="weight_low_high">Weight: Low to High</option>
-              <option value="weight_high_low">Weight: High to Low</option>
-            </select>
+            <SelectDropdown
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              options={[
+                { value: "newest", label: "Newest First" },
+                { value: "price_low_high", label: "Price: Low to High" },
+                { value: "price_high_low", label: "Price: High to Low" },
+                { value: "popular", label: "Popular" },
+                { value: "weight_low_high", label: "Weight: Low to High" },
+                { value: "weight_high_low", label: "Weight: High to Low" },
+              ]}
+              className={styles.sortSelect}
+            />
           </div>
         </div>
       </section>
@@ -264,7 +280,7 @@ export default function CategoryListing() {
           <div className={styles.filterBlock}>
             <label className={styles.filterLabel}>Metal</label>
             <div className={styles.filterInlineList}>
-              {["Gold", "Silver"].map((metal) => (
+              {metalOptions.map((metal) => (
                 <label key={metal} className={styles.filterCheckboxLabel}>
                   <input
                     type="checkbox"
@@ -281,7 +297,7 @@ export default function CategoryListing() {
           <div className={styles.filterBlock}>
             <label className={styles.filterLabel}>Purity</label>
             <div className={styles.filterInlineList}>
-              {["22K", "18K", "14K", "925"].map((purity) => (
+              {purityOptions.map((purity) => (
                 <label key={purity} className={styles.filterCheckboxLabel}>
                   <input
                     type="checkbox"
@@ -298,7 +314,7 @@ export default function CategoryListing() {
           <div className={styles.filterBlock}>
             <label className={styles.filterLabel}>Occasion</label>
             <div className={styles.filterInlineList}>
-              {["Wedding", "Daily Wear", "Party"].map((occasion) => (
+              {occasionOptions.map((occasion) => (
                 <label key={occasion} className={styles.filterCheckboxLabel}>
                   <input
                     type="checkbox"
@@ -334,15 +350,16 @@ export default function CategoryListing() {
 
           <div className={styles.filterBlock}>
             <label className={styles.filterLabel}>Availability</label>
-            <select
+            <SelectDropdown
               value={filters.availability}
               onChange={(e) => handleFilterChange("availability", e.target.value)}
+              options={[
+                { value: "all", label: "All Products" },
+                { value: "in_stock", label: "In Stock" },
+                { value: "out_of_stock", label: "Out of Stock" },
+              ]}
               className={styles.filterSelect}
-            >
-              <option value="all">All Products</option>
-              <option value="in_stock">In Stock</option>
-              <option value="out_of_stock">Out of Stock</option>
-            </select>
+            />
           </div>
 
           <div className={styles.filterBlock}>

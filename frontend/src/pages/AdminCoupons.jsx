@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SelectDropdown from "../components/common/SelectDropdown";
 import adminAPI from "../services/adminApi";
 import "./AdminCoupons.css";
 
@@ -171,10 +172,15 @@ function AdminCoupons() {
           <div className="acp-form-grid">
             <input name="code" placeholder="Coupon Code" value={form.code} onChange={handleChange} />
 
-            <select name="discountType" value={form.discountType} onChange={handleChange}>
-              <option value="flat">Flat Rs</option>
-              <option value="percent">Percentage %</option>
-            </select>
+            <SelectDropdown
+              name="discountType"
+              value={form.discountType}
+              onChange={handleChange}
+              options={[
+                { value: "flat", label: "Flat Rs" },
+                { value: "percent", label: "Percentage %" },
+              ]}
+            />
 
             <input
               name="discountValue"

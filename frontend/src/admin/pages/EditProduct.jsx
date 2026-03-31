@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
+import { METAL_TYPES, OCCASION_TYPES, PRODUCT_CATEGORIES } from "../../constants/productOptions";
 import "./EditProduct.css";
 
 function EditProduct() {
@@ -171,9 +172,15 @@ function EditProduct() {
                   name="category"
                   value={form.category}
                   onChange={handleChange}
-                  placeholder="Category"
+                  list="edit-product-category-options"
+                  placeholder="Select or type category"
                   required
                 />
+                <datalist id="edit-product-category-options">
+                  {PRODUCT_CATEGORIES.map((category) => (
+                    <option key={category} value={category} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="field-group">
@@ -182,9 +189,15 @@ function EditProduct() {
                   name="metal"
                   value={form.metal}
                   onChange={handleChange}
-                  placeholder="Metal"
+                  list="edit-product-metal-options"
+                  placeholder="Select or type metal"
                   required
                 />
+                <datalist id="edit-product-metal-options">
+                  {METAL_TYPES.map((metal) => (
+                    <option key={metal} value={metal} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="field-group full-span">
@@ -193,9 +206,15 @@ function EditProduct() {
                   name="occasion"
                   value={form.occasion}
                   onChange={handleChange}
-                  placeholder="Occasion"
+                  list="edit-product-occasion-options"
+                  placeholder="Select or type occasion"
                   required
                 />
+                <datalist id="edit-product-occasion-options">
+                  {OCCASION_TYPES.map((occasion) => (
+                    <option key={occasion} value={occasion} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="field-group full-span">
