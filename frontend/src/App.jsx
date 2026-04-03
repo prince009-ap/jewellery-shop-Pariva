@@ -37,6 +37,7 @@ import { useAuth } from "./context/AuthContext";
 import AppRoutes from "./routes";
 import Loader from "./components/Loader";
 import { registerLoader } from "./services/api";
+import ChatWidget from "./components/chat/ChatWidget";
 
 function AppContent() {
   const { loading, setLoading } = useLoader();
@@ -50,6 +51,7 @@ function AppContent() {
     <>
       {loading && <Loader full />}
       <AppRoutes />
+      <ChatWidget />
     </>
   );
 }

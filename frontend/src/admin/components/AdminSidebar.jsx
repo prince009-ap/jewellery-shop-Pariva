@@ -8,6 +8,7 @@ import {
   MdPalette,
   MdLocalOffer,
   MdFeedback,
+  MdChat,
   MdMenu,
   MdClose,
   MdLogout,
@@ -69,6 +70,11 @@ function AdminSidebar() {
       label: "Customer Feedback",
       icon: MdFeedback,
       path: "/admin/reviews",
+    },
+    {
+      label: "Live Chat",
+      icon: MdChat,
+      path: "/admin/live-chat",
     },
     {
       label: "Custom Designs",

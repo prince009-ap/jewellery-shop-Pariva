@@ -25,6 +25,7 @@ import AdminCustomDesigns from "../pages/custom/AdminCustomDesigns";
 import AdminCoupons from "../pages/AdminCoupons";
 import AdminOrders from "../admin/pages/AdminOrders";
 import ReviewManagement from "../admin/pages/ReviewManagement";
+import AdminLiveChat from "../admin/pages/AdminLiveChat";
 
 import Payment from "../pages/checkout/Payment";
 
@@ -235,6 +236,17 @@ export default function AppRoutes() {
           <AdminRoute>
             <AdminLayout>
               <ReviewManagement />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/live-chat"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminLiveChat />
             </AdminLayout>
           </AdminRoute>
         }
