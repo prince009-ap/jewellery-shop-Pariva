@@ -56,6 +56,7 @@ body {
   font-size: 16px;
   line-height: 1.6;
   position: relative;
+  overflow-x: clip;
 }
 
 button,
@@ -85,12 +86,14 @@ a {
   flex: 1;
   position: relative;
   z-index: 1;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .page {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 2.4rem 1.75rem 3rem;
+  padding: clamp(1.5rem, 3vw, 2.4rem) clamp(0.95rem, 3.2vw, 1.75rem) clamp(2.2rem, 4vw, 3rem);
 }
 
 .page-header {
@@ -115,7 +118,7 @@ a {
 .page-narrow {
   max-width: 640px;
   margin: 0 auto;
-  padding: 3rem 1.75rem 4rem;
+  padding: clamp(2rem, 4vw, 3rem) clamp(0.95rem, 3.2vw, 1.75rem) clamp(2.5rem, 5vw, 4rem);
 }
 
 .page-title {
@@ -126,7 +129,7 @@ a {
 .section {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 3.5rem 1.75rem 0;
+  padding: clamp(2rem, 5vw, 3.5rem) clamp(0.95rem, 3.2vw, 1.75rem) 0;
   position: relative;
   z-index: 1;
 }
@@ -316,4 +319,16 @@ a {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
 }

@@ -189,6 +189,7 @@
   gap: 12px;
   position: sticky;
   top: 24px;
+  max-height: calc(100vh - 32px);
 }
 
 .sidebarCard {
@@ -197,11 +198,37 @@
   padding: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f6f9fb 100%);
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
 }
 
 .categoryNav {
   display: grid;
   gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  overscroll-behavior: contain;
+}
+
+.categoryNav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.categoryNav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.categoryNav::-webkit-scrollbar-thumb {
+  background: rgba(166, 120, 24, 0.22);
+  border-radius: 999px;
+}
+
+.categoryNav::-webkit-scrollbar-thumb:hover {
+  background: rgba(166, 120, 24, 0.38);
 }
 
 .categoryNavItem {
@@ -309,6 +336,7 @@
 }
 
 .filterCheckboxLabel {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -329,9 +357,46 @@
 }
 
 .filterCheckbox {
-  width: 15px;
-  height: 15px;
-  accent-color: #c49323;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.filterCheckboxBox {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #c8b07a;
+  border-radius: 6px;
+  background: #fff;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filterCheckboxBox::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 4px;
+  height: 9px;
+  border-right: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  transform: rotate(45deg);
+}
+
+.filterCheckbox:checked + .filterCheckboxBox {
+  border-color: #c9982e;
+  background: linear-gradient(180deg, #f4df9b 0%, #d6a83a 100%);
+  box-shadow: 0 8px 16px rgba(201, 152, 46, 0.18);
+}
+
+.filterCheckbox:checked + .filterCheckboxBox::after {
+  border-color: #4d3a11;
+}
+
+.filterCheckbox:focus-visible + .filterCheckboxBox {
+  box-shadow: 0 0 0 4px rgba(214, 185, 122, 0.18);
 }
 
 .filterInput {
@@ -473,6 +538,19 @@
   font-weight: 700;
 }
 
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ratingText {
+  font-size: 0.78rem;
+  color: #6f7f92;
+  font-weight: 600;
+}
+
 .inStock {
   color: #17724d;
 }
@@ -572,6 +650,15 @@
 
   .sidebar {
     position: static;
+    max-height: none;
+  }
+
+  .sidebarCard {
+    max-height: none;
+  }
+
+  .categoryNav {
+    max-height: 360px;
   }
 }
 
@@ -615,5 +702,11 @@
 
   .categoryTitle {
     font-size: 2rem;
+  }
+
+  .categoryNav {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }

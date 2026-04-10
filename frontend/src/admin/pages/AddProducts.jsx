@@ -236,29 +236,21 @@ function AddProduct() {
                   Product Image * <span className="required-note">(Required)</span>
                 </label>
 
-                <div className={`upload-box ${form.image ? "selected" : ""}`}>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    className="hidden-input"
-                    onChange={handleImageChange}
-                  />
-
-                  <button
-                    type="button"
-                    className="product-pill-btn upload-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {form.image ? "Change Image" : "Choose Image"}
-                  </button>
-
-                  {form.image ? (
-                    <p className="upload-hint success">Selected: {form.image.name}</p>
-                  ) : (
-                    <p className="upload-hint">Please select an image for the product</p>
-                  )}
-
+                <div className="ui-file-field">
+                  <label className={`ui-file-shell ${form.image ? "has-file" : ""}`}>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      className="ui-file-input"
+                      onChange={handleImageChange}
+                    />
+                    <span className="ui-file-trigger">{form.image ? "Change Image" : "Choose Image"}</span>
+                    <span className="ui-file-copy">
+                      <span className="ui-file-name">{form.image?.name || "No product image selected"}</span>
+                      <span className="ui-file-caption">Upload a clean product image for catalog display.</span>
+                    </span>
+                  </label>
                   {previewUrl && (
                     <div className="preview-wrap">
                       <img src={previewUrl} alt="Preview" />
@@ -269,34 +261,40 @@ function AddProduct() {
             </div>
 
             <div className="flags-wrap">
-              <label>
+              <label className="ui-check-label">
                 <input
                   type="checkbox"
                   name="isFeatured"
+                  className="ui-check-input"
                   checked={form.isFeatured}
                   onChange={handleChange}
                 />
-                Featured Product
+                <span className="ui-check-box" aria-hidden="true"></span>
+                <span className="ui-check-text">Featured Product</span>
               </label>
 
-              <label>
+              <label className="ui-check-label">
                 <input
                   type="checkbox"
                   name="isTrending"
+                  className="ui-check-input"
                   checked={form.isTrending}
                   onChange={handleChange}
                 />
-                Trending Product
+                <span className="ui-check-box" aria-hidden="true"></span>
+                <span className="ui-check-text">Trending Product</span>
               </label>
 
-              <label>
+              <label className="ui-check-label">
                 <input
                   type="checkbox"
                   name="isRecommended"
+                  className="ui-check-input"
                   checked={form.isRecommended}
                   onChange={handleChange}
                 />
-                Recommended Product
+                <span className="ui-check-box" aria-hidden="true"></span>
+                <span className="ui-check-text">Recommended Product</span>
               </label>
             </div>
 

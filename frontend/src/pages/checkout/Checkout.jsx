@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import API from "../../services/api";
 import useCart from "../../context/useCart";
 
+const APPLIED_COUPON_STORAGE_KEY = "appliedCartCoupon";
+
 export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,6 +19,30 @@ export default function Checkout() {
   const directQuantity = location.state?.quantity || 1;
   const stateItems = location.state?.items || [];
   const source = location.state?.source || "cart";
+  const appliedCoupon = useMemo(() => {
+    if (location.state?.appliedCoupon) {
+      return location.state.appliedCoupon;
+    }
+
+    const savedCoupon = sessionStorage.getItem(APPLIED_COUPON_STORAGE_KEY);
+    if (!savedCoupon) return null;
+
+    try {
+      const parsedCoupon = JSON.parse(savedCoupon);
+      if (!parsedCoupon?.code || Number(parsedCoupon?.discount || 0) <= 0) {
+        sessionStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
+        return null;
+      }
+
+      return {
+        code: parsedCoupon.code,
+        discount: Number(parsedCoupon.discount),
+      };
+    } catch {
+      sessionStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
+      return null;
+    }
+  }, [location.state]);
 
   const checkoutItems = useMemo(() => {
     if (stateItems.length > 0) {
@@ -80,16 +106,23 @@ export default function Checkout() {
       0
     );
     const stone = checkoutItems.reduce((sum, item) => sum + (item.stonePrice || 0) * item.qty, 0);
-    const gst = (gold + making + stone) * 0.03;
+    const subtotal = gold + making + stone;
+    const gst = subtotal * 0.03;
+    const preDiscountTotal = subtotal + gst;
+    const couponDiscount = Math.min(Number(appliedCoupon?.discount || 0), preDiscountTotal);
+    const total = Math.max(preDiscountTotal - couponDiscount, 0);
 
     return {
       gold,
       making,
       stone,
       gst,
-      total: gold + making + stone + gst,
+      subtotal,
+      couponCode: appliedCoupon?.code || "",
+      couponDiscount,
+      total,
     };
-  }, [checkoutItems]);
+  }, [checkoutItems, appliedCoupon]);
 
   const formatPrice = (value) => `Rs ${Number(value || 0).toLocaleString("en-IN")}`;
 
@@ -247,6 +280,15 @@ export default function Checkout() {
                 <span>GST (3%)</span>
                 <strong>{formatPrice(priceBreakup.gst.toFixed(0))}</strong>
               </div>
+              {priceBreakup.couponDiscount > 0 ? (
+                <div className="checkout-bill-row">
+                  <span>
+                    Coupon Discount
+                    {priceBreakup.couponCode ? ` (${priceBreakup.couponCode})` : ""}
+                  </span>
+                  <strong>- {formatPrice(priceBreakup.couponDiscount.toFixed(0))}</strong>
+                </div>
+              ) : null}
               <div className="checkout-bill-total">
                 <span>Total</span>
                 <strong>{formatPrice(priceBreakup.total.toFixed(0))}</strong>

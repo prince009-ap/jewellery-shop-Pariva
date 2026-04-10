@@ -63,6 +63,22 @@
   gap: 16px;
 }
 
+.aod-overdue-banner {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #f2c7cd;
+  background: linear-gradient(135deg, #fff6f7 0%, #fffdfc 100%);
+  color: #b42318;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.aod-shipped-delay-banner {
+  border-color: #c7daf8;
+  background: linear-gradient(135deg, #f5f9ff 0%, #fcfeff 100%);
+  color: #1d4ed8;
+}
+
 .aod-card {
   background: linear-gradient(165deg, #ffffff 0%, #fcfdff 100%);
   border: 1px solid #e2e8f0;
@@ -285,6 +301,42 @@
   gap: 8px;
   color: #64748b;
   font-size: 0.9rem;
+}
+
+.aod-tracking-box {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #fbfdff 0%, #f6f9fc 100%);
+}
+
+.aod-tracking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.aod-tracking-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aod-tracking-grid strong {
+  color: #20354f;
+  line-height: 1.5;
+}
+
+.aod-tracking-note {
+  margin: 0;
+  color: #5f738d;
+  line-height: 1.5;
 }
 
 .aod-btn {

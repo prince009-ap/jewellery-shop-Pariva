@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DatePicker from "../components/common/DatePicker";
 import SelectDropdown from "../components/common/SelectDropdown";
 import adminAPI from "../services/adminApi";
 import "./AdminCoupons.css";
@@ -196,16 +197,22 @@ function AdminCoupons() {
               onChange={handleChange}
             />
 
-            <input type="date" name="expiryDate" value={form.expiryDate} onChange={handleChange} />
+            <DatePicker
+              name="expiryDate"
+              value={form.expiryDate}
+              onChange={handleChange}
+            />
 
-            <label className="acp-checkbox">
+            <label className="acp-checkbox ui-check-label">
               <input
                 type="checkbox"
                 name="firstOrderOnly"
+                className="ui-check-input"
                 checked={form.firstOrderOnly}
                 onChange={handleChange}
               />
-              <span>Only for first order welcome coupon</span>
+              <span className="ui-check-box" aria-hidden="true"></span>
+              <span className="ui-check-text">Only for first order welcome coupon</span>
             </label>
 
             <button type="button" className="acp-btn acp-btn-primary" onClick={createCoupon} disabled={creating}>

@@ -3,6 +3,8 @@ import { useState } from "react";
 import API from "../../services/api";
 import "../../styles/loading.css";
 
+const APPLIED_COUPON_STORAGE_KEY = "appliedCartCoupon";
+
 export default function Payment() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,6 +37,10 @@ export default function Payment() {
     setStatusType(type);
   };
 
+  const clearAppliedCoupon = () => {
+    sessionStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
+  };
+
   const placeCodOrder = async () => {
     if (codLoading) return;
 
@@ -54,6 +60,7 @@ export default function Payment() {
         },
       });
 
+      clearAppliedCoupon();
       showMessage("Order placed successfully with Cash on Delivery.", "success");
       window.setTimeout(() => navigate("/account/orders"), 1200);
     } catch (err) {
@@ -116,6 +123,7 @@ export default function Payment() {
             });
 
             if (data.success) {
+              clearAppliedCoupon();
               showMessage("Payment successful. Your order has been placed.", "success");
               window.setTimeout(() => navigate("/account/orders"), 1200);
             } else {
@@ -232,6 +240,15 @@ export default function Payment() {
                 <span>GST (3%)</span>
                 <strong>{formatPrice(priceBreakup.gst.toFixed(0))}</strong>
               </div>
+              {Number(priceBreakup.couponDiscount || 0) > 0 ? (
+                <div className="checkout-bill-row">
+                  <span>
+                    Coupon Discount
+                    {priceBreakup.couponCode ? ` (${priceBreakup.couponCode})` : ""}
+                  </span>
+                  <strong>- {formatPrice(Number(priceBreakup.couponDiscount).toFixed(0))}</strong>
+                </div>
+              ) : null}
               <div className="checkout-bill-total">
                 <span>Total</span>
                 <strong>{formatPrice(priceBreakup.total.toFixed(0))}</strong>

@@ -98,6 +98,12 @@ export default function ChatWidget() {
     return "Pariva Assistant";
   }, [conversation?.mode]);
 
+  const emitSeen = () => {
+    if (!open || !conversation?._id || !socketRef.current) return;
+    if (document.visibilityState !== "visible") return;
+    socketRef.current.emit("chat:seen", { conversationId: conversation._id });
+  };
+
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
@@ -201,21 +207,28 @@ export default function ChatWidget() {
       return undefined;
     }
 
-    const markSeen = () => {
-      if (document.visibilityState === "visible") {
-        socketRef.current?.emit("chat:seen", { conversationId: conversation._id });
-      }
-    };
-
-    markSeen();
-    window.addEventListener("focus", markSeen);
-    document.addEventListener("visibilitychange", markSeen);
+    emitSeen();
+    window.addEventListener("focus", emitSeen);
+    document.addEventListener("visibilitychange", emitSeen);
 
     return () => {
-      window.removeEventListener("focus", markSeen);
-      document.removeEventListener("visibilitychange", markSeen);
+      window.removeEventListener("focus", emitSeen);
+      document.removeEventListener("visibilitychange", emitSeen);
     };
   }, [open, conversation?._id]);
+
+  useEffect(() => {
+    if (!open || !conversation?._id) return;
+
+    const hasUnreadIncoming = messages.some(
+      (message) =>
+        (message.sender === "agent" || message.sender === "bot") && message.status !== "seen"
+    );
+
+    if (hasUnreadIncoming) {
+      emitSeen();
+    }
+  }, [messages, open, conversation?._id]);
 
   if (!isAuthenticated || !user) {
     return null;
@@ -433,9 +446,7 @@ export default function ChatWidget() {
                 type="text"
                 value={draft}
                 onChange={(event) => handleDraftChange(event.target.value)}
-                onFocus={() =>
-                  socketRef.current?.emit("chat:seen", { conversationId: conversation?._id })
-                }
+                onFocus={emitSeen}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();

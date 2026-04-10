@@ -144,6 +144,16 @@
   border-color: #cbd5e1;
 }
 
+.admin-orders-page .ao-card-overdue {
+  border-color: #f2b8bf;
+  background: linear-gradient(165deg, #ffffff 0%, #fff7f8 100%);
+}
+
+.admin-orders-page .ao-card-shipped-delay {
+  border-color: #c7daf8;
+  background: linear-gradient(165deg, #ffffff 0%, #f7fbff 100%);
+}
+
 .admin-orders-page .ao-card * {
   box-sizing: border-box;
 }
@@ -273,6 +283,50 @@
 .admin-orders-page .ao-date-row strong {
   color: #213753;
   font-weight: 700;
+}
+
+.admin-orders-page .ao-alert-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+
+.admin-orders-page .ao-age-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 6px 10px;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-orders-page .ao-age-pill.overdue {
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.admin-orders-page .ao-age-pill.shipped-delay {
+  background: #eaf2ff;
+  color: #1d4ed8;
+}
+
+.admin-orders-page .ao-overdue-note {
+  color: #b42318;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.admin-orders-page .ao-shipped-delay-note {
+  color: #1d4ed8;
+  font-size: 0.86rem;
+  font-weight: 600;
 }
 
 .admin-orders-page .ao-actions {

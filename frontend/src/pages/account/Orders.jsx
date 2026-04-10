@@ -86,6 +86,30 @@ function Orders() {
     }
   };
 
+  const getOrderAgeInDays = (dateString) => {
+    const createdAt = new Date(dateString);
+    const diffMs = Date.now() - createdAt.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
+  const getShippedAgeInDays = (order) => {
+    const shippedEntry = [...(order?.trackingHistory || [])]
+      .reverse()
+      .find((entry) => String(entry.status || "").toLowerCase() === "shipped");
+    const referenceDate = shippedEntry?.date || order?.shipmentTracking?.lastUpdatedAt || order?.updatedAt || order?.createdAt;
+    return getOrderAgeInDays(referenceDate);
+  };
+
+  const isDelayedOrder = (order) => {
+    const status = String(order?.orderStatus || "").toLowerCase();
+    return ["pending", "confirmed"].includes(status) && getOrderAgeInDays(order.createdAt) >= 7;
+  };
+
+  const isDelayedShipment = (order) => {
+    const status = String(order?.orderStatus || "").toLowerCase();
+    return status === "shipped" && getShippedAgeInDays(order) >= 7;
+  };
+
   if (loading) {
     return (
       <div className="page-loading-overlay">
@@ -117,6 +141,10 @@ function Orders() {
           <div className="orders-list">
             {orders.map((order) => {
               const previewItem = getPreviewItem(order);
+              const isDelayed = isDelayedOrder(order);
+              const orderAgeDays = getOrderAgeInDays(order.createdAt);
+              const shippedDelayed = isDelayedShipment(order);
+              const shippedAgeDays = getShippedAgeInDays(order);
 
               return (
                 <div
@@ -158,6 +186,15 @@ function Orders() {
                         <p className="order-summary-card__item-count">
                           {order.items?.length || 0} item{order.items?.length === 1 ? "" : "s"}
                         </p>
+                        {isDelayed ? (
+                          <p className="order-summary-card__item-count" style={{ color: "#b42318", fontWeight: 700 }}>
+                            Delay alert: {orderAgeDays} days old and still not shipped
+                          </p>
+                        ) : shippedDelayed ? (
+                          <p className="order-summary-card__item-count" style={{ color: "#1d4ed8", fontWeight: 700 }}>
+                            Shipment delayed: {shippedAgeDays} days since shipped, still not delivered
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 

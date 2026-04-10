@@ -45,6 +45,20 @@ import { getLiveMetalRates } from "../services/metalPriceService.js";
 import Coupon from "../models/Coupon.js";
 import Order from "../models/Order.js";
 
+const getShippedReferenceDate = (order) => {
+  const shippedEntry = [...(order?.trackingHistory || [])]
+    .reverse()
+    .find((entry) => String(entry.status || "").toLowerCase() === "shipped");
+
+  return new Date(
+    shippedEntry?.date ||
+      order?.shipmentTracking?.lastUpdatedAt ||
+      order?.updatedAt ||
+      order?.createdAt ||
+      Date.now()
+  );
+};
+
 export const getAdminDashboardStats = async (req, res) => {
   try {
     const totalProducts = await Product.countDocuments();
@@ -96,6 +110,37 @@ export const getAdminDashboardStats = async (req, res) => {
     const totalRevenue = Math.round((totalRevenueAgg[0]?.total || 0) * 100) / 100;
     const todayRevenue = Math.round((todayRevenueAgg[0]?.total || 0) * 100) / 100;
 
+    const overdueThreshold = new Date();
+    overdueThreshold.setDate(overdueThreshold.getDate() - 7);
+
+    const overdueOrders = await Order.find({
+      createdAt: { $lte: overdueThreshold },
+      orderStatus: { $in: ["pending", "confirmed"] },
+    })
+      .populate("user", "name email")
+      .sort({ createdAt: 1 })
+      .limit(5)
+      .select("_id createdAt orderStatus priceBreakup.totalAmount user");
+
+    const overdueOrdersCount = await Order.countDocuments({
+      createdAt: { $lte: overdueThreshold },
+      orderStatus: { $in: ["pending", "confirmed"] },
+    });
+
+    const shippedOrders = await Order.find({ orderStatus: "shipped" })
+      .populate("user", "name email")
+      .select("_id createdAt updatedAt orderStatus priceBreakup.totalAmount user trackingHistory shipmentTracking");
+
+    const delayedShippedOrders = shippedOrders
+      .filter((order) => {
+        const shippedAt = getShippedReferenceDate(order);
+        return shippedAt <= overdueThreshold;
+      })
+      .sort((a, b) => getShippedReferenceDate(a) - getShippedReferenceDate(b))
+      .slice(0, 5);
+
+    const delayedShippedOrdersCount = delayedShippedOrders.length;
+
     // 🔥 RECENT PRODUCTS (NEW)
     const recentProducts = await Product.find()
       .sort({ createdAt: -1 })
@@ -118,8 +163,12 @@ export const getAdminDashboardStats = async (req, res) => {
       todayProducts,
       last7DaysUsers,
       last7DaysProducts,
+      overdueOrdersCount,
+      overdueOrders,
+      delayedShippedOrdersCount,
+      delayedShippedOrders,
 
-      // 👇 NEW
+      // Dashboard extras
       recentProducts,
     });
   } catch (err) {
@@ -167,4 +216,6 @@ console.log("Latest Product Date:", sample.createdAt);
     res.status(500).json({ message: "Analytics failed" });
   }
 };
+
+
 

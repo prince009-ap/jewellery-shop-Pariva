@@ -8,8 +8,8 @@ const userSchema = new mongoose.Schema({
   dob: { type: Date, required: true },
   gender: { type: String, enum: ["male", "female", "other"], required: true },
   role: { type: String, enum: ["user", "admin"], default: "user" },
-   resetToken: String,
-  resetTokenExpire: Date,
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
   isBlocked: {
   type: Boolean,
   default: false,

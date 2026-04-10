@@ -5,16 +5,59 @@ import API from "../../services/api";
 import useCart from "../../context/useCart";
 import QuantitySelector from "../../components/common/QuantitySelector";
 import WorkingWishlistHeart from "../../components/wishlist/WorkingWishlistHeart";
+import StarRating from "../../components/StarRating";
+import { PRODUCT_CATEGORIES } from "../../constants/productOptions";
 import styles from "./CategoryListing.module.css";
 
-const CATEGORY_LINKS = [
-  { label: "Rings", slug: "rings", description: "Statement rings and daily silhouettes" },
-  { label: "Necklaces", slug: "necklaces", description: "Layered elegance and occasion pieces" },
-  { label: "Bracelets", slug: "bracelet", description: "Refined wristwear with subtle shine" },
-  { label: "Pendants", slug: "pandent", description: "Lightweight detail pieces for every day" },
-  { label: "Earrings", slug: "earrings", description: "Crafted drops, studs, and festive pairs" },
-  { label: "Bangles", slug: "bangles", description: "Traditional lines with modern polish" },
-];
+const CATEGORY_DESCRIPTIONS = {
+  rings: "Statement rings and daily silhouettes",
+  necklaces: "Layered elegance and occasion pieces",
+  bracelet: "Refined wristwear with subtle shine",
+  bracelets: "Refined wristwear with subtle shine",
+  pandent: "Lightweight detail pieces for every day",
+  pendants: "Lightweight detail pieces for every day",
+  earrings: "Crafted drops, studs, and festive pairs",
+  bangles: "Traditional lines with modern polish",
+  chains: "Sleek chain styles for layering and gifting",
+  anklets: "Graceful anklewear with festive charm",
+  mangalsutra: "Sacred silhouettes designed with modern elegance",
+  "nose-pins": "Delicate accents for subtle shine",
+  "maang-tikka": "Bridal forehead pieces with timeless detailing",
+  "toe-rings": "Minimal finishing touches for everyday styling",
+  kada: "Bold heritage cuffs with polished structure",
+  chokers: "Closer neckline pieces for standout dressing",
+  "jewellery-sets": "Complete coordinated looks for celebrations",
+  "bridal-sets": "Wedding-ready sets with statement presence",
+  brooches: "Decorative accents for special styling moments",
+  charms: "Small symbolic pieces with personal meaning",
+};
+
+const CATEGORY_SLUG_OVERRIDES = {
+  bracelets: "bracelet",
+  pendants: "pandent",
+};
+
+const formatCategoryLabel = (value) =>
+  String(value || "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const getCategorySlug = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return CATEGORY_SLUG_OVERRIDES[normalized] || normalized.replace(/\s+/g, "-");
+};
+
+const buildCategoryItem = (value) => {
+  const slug = getCategorySlug(value);
+  return {
+    label: formatCategoryLabel(value),
+    slug,
+    description:
+      CATEGORY_DESCRIPTIONS[slug] || "Beautiful jewellery collection tailored for every moment",
+  };
+};
 
 export default function CategoryListing() {
   const { category } = useParams();
@@ -37,6 +80,17 @@ export default function CategoryListing() {
   });
   const [priceRange, setPriceRange] = useState([0, 2000000]);
   const [weightRange, setWeightRange] = useState([0, 100]);
+
+  const categoryLinks = [
+    ...new Map(
+      [...PRODUCT_CATEGORIES, formatCategoryLabel(category)]
+        .filter(Boolean)
+        .map((item) => {
+          const builtItem = buildCategoryItem(item);
+          return [builtItem.slug, builtItem];
+        })
+    ).values(),
+  ];
 
   const metalOptions = [...new Set(products.map((product) => product.metal).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b)
@@ -162,7 +216,7 @@ export default function CategoryListing() {
   };
 
   const getCategoryInfo = () => {
-    const activeCategory = CATEGORY_LINKS.find(
+    const activeCategory = categoryLinks.find(
       (item) => item.slug.toLowerCase() === String(category || "").toLowerCase()
     );
 
@@ -288,6 +342,7 @@ export default function CategoryListing() {
                     onChange={() => handleMultiSelectFilter("metal", metal)}
                     className={styles.filterCheckbox}
                   />
+                  <span className={styles.filterCheckboxBox} aria-hidden="true"></span>
                   <span>{metal}</span>
                 </label>
               ))}
@@ -305,6 +360,7 @@ export default function CategoryListing() {
                     onChange={() => handleMultiSelectFilter("purity", purity)}
                     className={styles.filterCheckbox}
                   />
+                  <span className={styles.filterCheckboxBox} aria-hidden="true"></span>
                   <span>{purity}</span>
                 </label>
               ))}
@@ -322,6 +378,7 @@ export default function CategoryListing() {
                     onChange={() => handleMultiSelectFilter("occasion", occasion)}
                     className={styles.filterCheckbox}
                   />
+                  <span className={styles.filterCheckboxBox} aria-hidden="true"></span>
                   <span>{occasion}</span>
                 </label>
               ))}
@@ -372,6 +429,7 @@ export default function CategoryListing() {
                   onChange={(e) => handleFilterChange("featured", e.target.checked)}
                   className={styles.filterCheckbox}
                 />
+                <span className={styles.filterCheckboxBox} aria-hidden="true"></span>
                 <span>Featured Only</span>
               </label>
               <label className={styles.filterCheckboxLabel}>
@@ -381,6 +439,7 @@ export default function CategoryListing() {
                   onChange={(e) => handleFilterChange("trending", e.target.checked)}
                   className={styles.filterCheckbox}
                 />
+                <span className={styles.filterCheckboxBox} aria-hidden="true"></span>
                 <span>Trending Only</span>
               </label>
             </div>
@@ -393,7 +452,7 @@ export default function CategoryListing() {
           <div className={styles.sidebarCard}>
             <p className={styles.sidebarEyebrow}>Browse Categories</p>
             <div className={styles.categoryNav}>
-              {CATEGORY_LINKS.map((item) => (
+              {categoryLinks.map((item) => (
                 <button
                   key={item.slug}
                   type="button"
@@ -428,6 +487,8 @@ export default function CategoryListing() {
                 (item) => item.product && item.product._id === product._id
               );
               const qty = cartItem?.qty || 0;
+              const ratingValue = Number(product.averageRating || 0);
+              const totalReviews = Number(product.totalReviews || 0);
 
               return (
               <article key={product._id} className={styles.productCard}>
@@ -466,6 +527,13 @@ export default function CategoryListing() {
                       className={`${styles.stockStatus} ${product.stock > 0 ? styles.inStock : styles.outOfStock}`}
                     >
                       {product.stock > 0 ? `In Stock (${product.stock})` : "Out of Stock"}
+                    </span>
+                  </div>
+
+                  <div className={styles.ratingRow}>
+                    <StarRating value={ratingValue} readonly size="small" />
+                    <span className={styles.ratingText}>
+                      {totalReviews > 0 ? `${ratingValue.toFixed(1)} (${totalReviews})` : "No reviews yet"}
                     </span>
                   </div>
 

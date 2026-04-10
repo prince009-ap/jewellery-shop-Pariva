@@ -256,6 +256,25 @@
   color: #9f2f3f;
 }
 
+@media (max-width: 1180px) {
+  .admin-users-page {
+    padding: 18px;
+  }
+
+  .au-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .au-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .au-table {
+    min-width: 720px;
+  }
+}
+
 @media (max-width: 900px) {
   .admin-users-page {
     padding: 16px;

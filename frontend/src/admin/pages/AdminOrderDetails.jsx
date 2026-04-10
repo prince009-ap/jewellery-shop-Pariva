@@ -18,18 +18,30 @@ function AdminOrderDetails() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
   const toastTimerRef = useRef(null);
-  const [tracking, setTracking] = useState({
-    courier: "",
-    trackingId: "",
-    status: "Order Placed",
-  });
-
   const showToast = (message, type = "success") => {
     setToast({ open: true, message, type });
     window.clearTimeout(toastTimerRef.current);
     toastTimerRef.current = window.setTimeout(() => {
       setToast({ open: false, message: "", type: "success" });
     }, 2400);
+  };
+
+  const getOrderAgeInDays = (dateString) => {
+    const createdAt = new Date(dateString);
+    const diffMs = Date.now() - createdAt.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
+  const getShippedAgeInDays = (currentOrder) => {
+    const shippedEntry = [...(currentOrder?.trackingHistory || [])]
+      .reverse()
+      .find((entry) => String(entry.status || "").toLowerCase() === "shipped");
+    const referenceDate =
+      shippedEntry?.date ||
+      currentOrder?.shipmentTracking?.lastUpdatedAt ||
+      currentOrder?.updatedAt ||
+      currentOrder?.createdAt;
+    return getOrderAgeInDays(referenceDate);
   };
 
   useEffect(
@@ -95,15 +107,6 @@ function AdminOrderDetails() {
     return [...PROGRESS_FLOW.slice(idx), "cancelled"];
   };
 
-  const saveTracking = async () => {
-    try {
-      await adminAPI.put(`/orders/admin/${order._id}/tracking`, tracking);
-      showToast("Tracking information saved");
-    } catch {
-      showToast("Failed to save tracking", "error");
-    }
-  };
-
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { color: "#92400e", bgColor: "#fef3c7", icon: "P" },
@@ -147,6 +150,11 @@ function AdminOrderDetails() {
   const statusBadge = getStatusBadge(order.orderStatus);
   const allowedStatuses = getAllowedStatuses(order.orderStatus);
   const isFinalStatus = ["delivered", "cancelled"].includes((order.orderStatus || "").toLowerCase());
+  const orderAgeDays = getOrderAgeInDays(order.createdAt);
+  const isOverdue = ["pending", "confirmed"].includes((order.orderStatus || "").toLowerCase()) && orderAgeDays >= 7;
+  const isDelayedShipment = (order.orderStatus || "").toLowerCase() === "shipped" && getShippedAgeInDays(order) >= 7;
+  const shippedAgeDays = getShippedAgeInDays(order);
+  const shipmentTracking = order.shipmentTracking || {};
 
   return (
     <div className="aod-page">
@@ -193,6 +201,20 @@ function AdminOrderDetails() {
             <span>{statusBadge.status}</span>
           </div>
         </header>
+
+        {isOverdue && (
+          <div className="aod-overdue-banner">
+            This order is overdue by process standards: {orderAgeDays} days old and still not shipped.
+            Update status or add shipment tracking for the customer.
+          </div>
+        )}
+
+        {isDelayedShipment && (
+          <div className="aod-overdue-banner aod-shipped-delay-banner">
+            This order was shipped {shippedAgeDays} days ago but is still not marked delivered.
+            If customer has received it, update status to delivered.
+          </div>
+        )}
 
         <section className="aod-grid-two">
           <article className="aod-card">
@@ -335,35 +357,30 @@ function AdminOrderDetails() {
 
           <div className="aod-form-block">
             <label>Shipment Tracking</label>
-            <div className="aod-field-grid">
-              <input
-                className="aod-field"
-                placeholder="Courier Name"
-                value={tracking.courier}
-                onChange={(e) => setTracking({ ...tracking, courier: e.target.value })}
-              />
-              <input
-                className="aod-field"
-                placeholder="Tracking ID"
-                value={tracking.trackingId}
-                onChange={(e) => setTracking({ ...tracking, trackingId: e.target.value })}
-              />
+            <div className="aod-tracking-box">
+              <div className="aod-tracking-grid">
+                <div>
+                  <span className="aod-tracking-label">Courier</span>
+                  <strong>{shipmentTracking.courier || "Auto-assign when order is shipped"}</strong>
+                </div>
+                <div>
+                  <span className="aod-tracking-label">Tracking ID</span>
+                  <strong>{shipmentTracking.trackingId || "Will be generated automatically"}</strong>
+                </div>
+                <div>
+                  <span className="aod-tracking-label">Tracking Status</span>
+                  <strong>{shipmentTracking.status || "Order placed"}</strong>
+                </div>
+                <div>
+                  <span className="aod-tracking-label">Last Updated</span>
+                  <strong>
+                    {shipmentTracking.lastUpdatedAt
+                      ? formatDate(shipmentTracking.lastUpdatedAt)
+                      : "Not generated yet"}
+                  </strong>
+                </div>
+              </div>
             </div>
-            <SelectDropdown
-              className="aod-field"
-              value={tracking.status}
-              onChange={(e) => setTracking({ ...tracking, status: e.target.value })}
-              options={[
-                "Order Placed",
-                "In Transit",
-                "Out for Delivery",
-                "Delivered",
-              ]}
-            />
-
-            <button type="button" className="aod-btn aod-btn-primary" onClick={saveTracking}>
-              Save Tracking Information
-            </button>
           </div>
         </section>
       </div>

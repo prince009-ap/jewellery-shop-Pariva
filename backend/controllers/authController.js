@@ -98,57 +98,125 @@ export const login = async (req, res) => {
 };
 
 export const forgotPassword = async (req, res) => {
-  const { email, role } = req.body;
+  try {
+    const { email, role } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
-  const user = await User.findOne({ email, role });
-  if (!user) {
-    return res.status(404).json({ message: "Account not found" });
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail, role });
+    if (!user) {
+      return res.status(404).json({ message: "Account not found" });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+    await user.save();
+
+    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+    await sendMail({
+      to: user.email,
+      subject: "Reset Your Password - PARIVA Jewellery",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Your Password - PARIVA Jewellery</title>
+        </head>
+        <body style="margin:0;padding:0;background-color:#f8f8f8;font-family:Arial,sans-serif;">
+          <div style="max-width:600px;margin:40px auto;background:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#d4af37 0%,#f4e4bc 100%);padding:40px 30px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:32px;font-weight:300;letter-spacing:3px;">PARIVA</h1>
+              <p style="margin:8px 0 0;color:#ffffff;font-size:14px;opacity:0.9;">Fine Jewellery</p>
+            </div>
+
+            <div style="padding:44px 36px;">
+              <h2 style="margin:0 0 18px;color:#333333;font-size:28px;font-weight:400;text-align:center;">Reset Your Password</h2>
+              <p style="margin:0 0 24px;color:#666666;font-size:16px;line-height:1.7;text-align:center;">
+                We received a request to reset your PARIVA account password. Click the button below to continue.
+              </p>
+
+              <div style="text-align:center;margin:34px 0;">
+                <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#111111 0%,#2c2118 100%);color:#f8f2e8;text-decoration:none;padding:16px 34px;border-radius:999px;font-size:14px;letter-spacing:0.16em;text-transform:uppercase;">
+                  Reset Password
+                </a>
+              </div>
+
+              <div style="background:#faf7f2;border:1px solid #eadfcf;border-radius:12px;padding:18px 20px;margin:24px 0;">
+                <p style="margin:0;color:#7a6b5c;font-size:14px;line-height:1.7;">
+                  This link will expire in 15 minutes. If the button does not work, copy and paste this URL into your browser:
+                </p>
+                <p style="margin:12px 0 0;word-break:break-all;color:#9a7740;font-size:13px;">${resetUrl}</p>
+              </div>
+
+              <p style="margin:0;color:#8b6914;font-size:14px;line-height:1.6;text-align:center;">
+                If you did not request this, you can safely ignore this email.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    res.json({
+      message: "Reset link sent to your email",
+      resetUrl,
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      message:
+        "Unable to send reset email. Please check mail settings and try again.",
+    });
   }
-
-  // 🔐 token generate
-  const resetToken = crypto.randomBytes(32).toString("hex");
-
-  user.resetPasswordToken = crypto
-    .createHash("sha256")
-    .update(resetToken)
-    .digest("hex");
-
-  user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
-
-  await user.save();
-
-  // ⚠️ abhi mail nahi bhej rahe (next phase)
-  const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
-
-  res.json({
-    message: "Reset link generated",
-    resetUrl, // dev purpose
-  });
 };
 
 /* RESET PASSWORD */
 export const resetPassword = async (req, res) => {
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(req.params.token)
-    .digest("hex");
+  try {
+    const { password } = req.body;
 
-  const user = await User.findOne({
-    resetPasswordToken: hashedToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
+    if (!password || password.trim().length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
 
-  if (!user) {
-    return res.status(400).json({ message: "Token invalid or expired" });
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Token invalid or expired" });
+    }
+
+    user.password = password.trim();
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Unable to reset password" });
   }
-
-  user.password = req.body.password; // bcrypt middleware encrypt karega
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-
-  await user.save();
-
-  res.json({ message: "Password reset successful" });
 };
 
 export const getMe = async (req, res) => {

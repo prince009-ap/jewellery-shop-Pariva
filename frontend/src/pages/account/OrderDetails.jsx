@@ -29,6 +29,8 @@ function OrderDetails() {
   const [selectedProductForReview, setSelectedProductForReview] = useState(null);
   const [orderReviews, setOrderReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewMessageType, setReviewMessageType] = useState("success");
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -67,8 +69,19 @@ function OrderDetails() {
     checkReviews();
   }, [order]);
 
+  useEffect(() => {
+    if (!reviewMessage) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setReviewMessage("");
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [reviewMessage]);
+
   const openReviewModal = (productId) => {
     setSelectedProductForReview(productId);
+    setReviewMessage("");
     setShowReviewModal(true);
   };
 
@@ -80,8 +93,9 @@ function OrderDetails() {
   const handleReviewSubmitted = (newReview) => {
     setReviewedProducts((prev) => [...prev, selectedProductForReview]);
     setOrderReviews((prev) => [...prev, newReview]);
+    setReviewMessage("Review submitted successfully.");
+    setReviewMessageType("success");
     closeReviewModal();
-    alert("Review submitted successfully!");
   };
 
   const downloadInvoice = async () => {
@@ -157,8 +171,40 @@ function OrderDetails() {
     }
   };
 
+  const getOrderAgeInDays = (dateString) => {
+    const createdAt = new Date(dateString);
+    const diffMs = Date.now() - createdAt.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
+  const getShippedAgeInDays = (currentOrder) => {
+    const shippedEntry = [...(currentOrder?.trackingHistory || [])]
+      .reverse()
+      .find((entry) => String(entry.status || "").toLowerCase() === "shipped");
+    const referenceDate =
+      shippedEntry?.date ||
+      currentOrder?.shipmentTracking?.lastUpdatedAt ||
+      currentOrder?.updatedAt ||
+      currentOrder?.createdAt;
+    return getOrderAgeInDays(referenceDate);
+  };
+
+  const isDelayedOrder = (currentOrder) => {
+    const status = String(currentOrder?.orderStatus || "").toLowerCase();
+    return ["pending", "confirmed"].includes(status) && getOrderAgeInDays(currentOrder.createdAt) >= 7;
+  };
+
+  const isDelayedShipment = (currentOrder) => {
+    const status = String(currentOrder?.orderStatus || "").toLowerCase();
+    return status === "shipped" && getShippedAgeInDays(currentOrder) >= 7;
+  };
+
   if (loading) return <p style={{ padding: 40 }}>Loading order...</p>;
   if (!order) return <p style={{ padding: 40 }}>Order not found</p>;
+  const delayedOrder = isDelayedOrder(order);
+  const orderAgeDays = getOrderAgeInDays(order.createdAt);
+  const delayedShipment = isDelayedShipment(order);
+  const shippedAgeDays = getShippedAgeInDays(order);
 
   return (
     <div style={{ padding: "2rem", maxWidth: 900, margin: "auto" }}>
@@ -179,6 +225,12 @@ function OrderDetails() {
           marginTop: "1rem",
         }}
       >
+        {reviewMessage ? (
+          <div className={`checkout-inline-message ${reviewMessageType}`}>
+            {reviewMessage}
+          </div>
+        ) : null}
+
         <div
           style={{
             display: "flex",
@@ -237,9 +289,56 @@ function OrderDetails() {
           </div>
         )}
 
+        {delayedOrder && (
+          <div
+            style={{
+              marginBottom: "1.5rem",
+              padding: "1rem 1.1rem",
+              backgroundColor: "#fff4f5",
+              border: "1px solid #f3c7cd",
+              borderRadius: "10px",
+              color: "#9f1239",
+            }}
+          >
+            <strong>Delivery delayed:</strong> This order is {orderAgeDays} days old and still not shipped.
+            Please contact support or ask admin to update shipping status.
+          </div>
+        )}
+
+        {delayedShipment && (
+          <div
+            style={{
+              marginBottom: "1.5rem",
+              padding: "1rem 1.1rem",
+              backgroundColor: "#eef4ff",
+              border: "1px solid #c7daf8",
+              borderRadius: "10px",
+              color: "#1d4ed8",
+            }}
+          >
+            <strong>Shipment delayed:</strong> This order was shipped {shippedAgeDays} days ago but is
+            still not marked delivered. Please contact support if you have already received it.
+          </div>
+        )}
+
         {order.trackingHistory && (
           <>
             <h3>Shipment Tracking</h3>
+            {order.shipmentTracking ? (
+              <div
+                style={{
+                  marginBottom: "1rem",
+                  padding: "1rem",
+                  backgroundColor: "#eef6ff",
+                  border: "1px solid #c9def5",
+                  borderRadius: "8px",
+                }}
+              >
+                <p><strong>Courier:</strong> {order.shipmentTracking.courier || "Awaiting dispatch"}</p>
+                <p><strong>Tracking ID:</strong> {order.shipmentTracking.trackingId || "Will be generated after shipment"}</p>
+                <p><strong>Live Status:</strong> {order.shipmentTracking.status || "Order placed"}</p>
+              </div>
+            ) : null}
             {order.trackingHistory.map((tracking, index) => (
               <div
                 key={index}

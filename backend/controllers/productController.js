@@ -1,4 +1,51 @@
 import Product from "../models/Product.js";
+import Review from "../models/Review.js";
+
+const attachReviewStatsToProducts = async (products) => {
+  const productList = Array.isArray(products) ? products : [products].filter(Boolean);
+
+  if (productList.length === 0) {
+    return Array.isArray(products) ? [] : null;
+  }
+
+  const productIds = productList.map((product) => product._id);
+  const reviewStats = await Review.aggregate([
+    { $match: { productId: { $in: productIds } } },
+    {
+      $group: {
+        _id: "$productId",
+        averageRating: { $avg: "$rating" },
+        totalReviews: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const statsMap = new Map(
+    reviewStats.map((item) => [
+      item._id.toString(),
+      {
+        averageRating: Math.round((item.averageRating || 0) * 10) / 10,
+        totalReviews: item.totalReviews || 0,
+      },
+    ])
+  );
+
+  const enriched = productList.map((productDoc) => {
+    const product = typeof productDoc.toObject === "function" ? productDoc.toObject() : { ...productDoc };
+    const stats = statsMap.get(product._id.toString()) || {
+      averageRating: product.averageRating || 0,
+      totalReviews: product.totalReviews || 0,
+    };
+
+    return {
+      ...product,
+      averageRating: stats.averageRating,
+      totalReviews: stats.totalReviews,
+    };
+  });
+
+  return Array.isArray(products) ? enriched : enriched[0];
+};
 
 export const createProduct = async (req, res) => {
   try {
@@ -39,9 +86,9 @@ console.log("PRODUCT ADDED:", product);
 
 export const getProducts = async (req, res) => {
   const products = await Product.find()
-    .select('name category price image metal occasion stock sku weight purity isFeatured isTrending isRecommended createdBy createdAt updatedAt')
+    .select("name category price image metal occasion stock sku weight purity isFeatured isTrending isRecommended createdBy createdAt updatedAt averageRating totalReviews")
     .sort({ createdAt: -1 });
-  res.json(products);
+  res.json(await attachReviewStatsToProducts(products));
 };
 
 
@@ -90,7 +137,7 @@ export const getProductsByCategory = async (req, res) => {
     // Use case-insensitive regex to match category
     const categoryRegex = new RegExp(['^' + category + '$'], 'i');
     const products = await Product.find({ category: categoryRegex }).sort({ createdAt: -1 });
-    res.json(products);
+    res.json(await attachReviewStatsToProducts(products));
   } catch (err) {
     console.error('Category query error:', err);
     res.status(500).json({ message: err.message });
@@ -103,7 +150,7 @@ export const getProductById = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.json(product);
+    res.json(await attachReviewStatsToProducts(product));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -161,7 +208,7 @@ export const getProductsByFilter = async (req, res) => {
     sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
     const products = await Product.find(filter).sort(sort);
-    res.json(products);
+    res.json(await attachReviewStatsToProducts(products));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

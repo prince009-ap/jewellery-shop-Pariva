@@ -183,11 +183,13 @@ export default function MapModal({ onClose, onSelect }) {
           <div className={`map-inline-message ${mapMessageType}`}>{mapMessage}</div>
         ) : null}
 
-        <MapContainer center={position} zoom={16} style={{ height: "400px", width: "100%" }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <Marker position={position} />
-          <MapController position={position} accuracy={accuracy} />
-        </MapContainer>
+        <div className="map-modal__map">
+          <MapContainer center={position} zoom={16} style={{ height: "400px", width: "100%" }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <Marker position={position} />
+            <MapController position={position} accuracy={accuracy} />
+          </MapContainer>
+        </div>
 
         <div className="map-modal__actions">
           <button className="use-location-btn" type="button" onClick={useLocation}>

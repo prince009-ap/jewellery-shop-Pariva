@@ -180,6 +180,51 @@ function Home() {
   const featured = filteredProducts.filter((p) => p.isFeatured).slice(0, 6);
   const trending = filteredProducts.filter((p) => p.isTrending).slice(0, 6);
   const recommended = filteredProducts.filter((p) => p.isRecommended).slice(0, 6);
+  const howItWorksSteps = useMemo(
+    () => [
+      {
+        number: "01",
+        kicker: "Discover",
+        title: "Browse curated jewellery collections",
+        description:
+          "Explore categories, featured designs and trending pieces to discover styles for daily wear, gifting and special occasions.",
+        note: "A simple starting point designed to help customers find the right piece quickly.",
+      },
+      {
+        number: "02",
+        kicker: "Shortlist",
+        title: "Refine your shortlist with confidence",
+        description:
+          "Use filters, product details, wishlist and reviews to compare options and choose the design that fits your style and budget.",
+        note: "Every important detail stays clear before the customer moves to cart.",
+      },
+      {
+        number: "03",
+        kicker: "Chat",
+        title: "Get quick help while you shop",
+        description:
+          "Use live chat to ask about designs, order updates or anything you need before making a purchase.",
+        note: "Fast support adds clarity and confidence throughout the journey.",
+      },
+      {
+        number: "04",
+        kicker: "Personalise",
+        title: "Personalise with custom design support",
+        description:
+          "Customers looking for something unique can submit a custom request with their preferred metal, size, stones and reference details.",
+        note: "This keeps the experience flexible for both ready-to-buy and custom jewellery buyers.",
+      },
+      {
+        number: "05",
+        kicker: "Checkout",
+        title: "Checkout securely and track the order",
+        description:
+          "Finish with address selection, transparent pricing, secure payment options and order tracking from the customer account.",
+        note: "The final step is built to feel clear, reliable and easy to trust.",
+      },
+    ],
+    []
+  );
 
   return (
     <div className="home-page">
@@ -313,7 +358,7 @@ function Home() {
             </p>
             <div className="hero-actions">
               <a href="#featured" className="hero-cta primary-cta">
-                Explore Best Sellers
+                Explore Collections
               </a>
               <a href="#custom" className="hero-cta ghost-cta">
                 Design Your Own
@@ -322,18 +367,13 @@ function Home() {
             <div className="hero-meta">
               <span>Free insured delivery</span>
               <span>7-day returns</span>
-              <span>Lifetime exchange</span>
-            </div>
-            <div className="hero-badge below">
-              <span className="hero-badge-title">Trusted by 50K+ customers</span>
-              <span className="hero-badge-sub">Across 120+ Indian cities</span>
             </div>
           </div>
           <div className="hero-visual">
             <div className="hero-banner-shell">
               <div className="hero-image-placeholder">
                 <div className="hero-image hero-image-stage">
-                <MidBannerSlider fillHeight />
+                  <MidBannerSlider fillHeight />
                 </div>
               </div>
             </div>
@@ -403,29 +443,28 @@ function Home() {
       <section className="section how-it-works">
         <div className="section-header">
           <h2>How It Works</h2>
-          <p>A seamless journey from shortlist to sparkle.</p>
+          <p>A simple and elegant path from discovery to delivery.</p>
         </div>
-        <div className="steps-grid">
-          <article className="step-card">
-            <div className="step-number">01</div>
-            <h3>Browse Jewellery</h3>
-            <p>Explore curated categories, collections and wedding edits.</p>
-          </article>
-          <article className="step-card">
-            <div className="step-number">02</div>
-            <h3>Apply Filters</h3>
-            <p>Refine by price, metal, occasion and purity for the perfect match.</p>
-          </article>
-          <article className="step-card">
-            <div className="step-number">03</div>
-            <h3>Customise & Compare</h3>
-            <p>Use the PARIVA custom studio to design pieces that are uniquely yours.</p>
-          </article>
-          <article className="step-card">
-            <div className="step-number">04</div>
-            <h3>Secure Checkout</h3>
-            <p>Enjoy insured shipping, BIS certification and lifetime exchange.</p>
-          </article>
+        <div className="steps-shell">
+          <div className="steps-intro">
+            <span className="steps-intro-kicker">Pariva Journey</span>
+            <h3>A clear jewellery buying experience built around trust, choice and convenience.</h3>
+            <p>
+              Customers can explore collections, refine their selection, request custom designs and
+              complete their purchase with a smooth checkout and tracking flow.
+            </p>
+          </div>
+          <div className="steps-grid">
+            {howItWorksSteps.map((step) => (
+              <article className="step-card" key={step.number}>
+                <div className="step-number">{step.number}</div>
+                <span className="step-kicker">{step.kicker}</span>
+                <h3>{step.title}</h3>
+                <p>{step.description}</p>
+                <span className="step-note">{step.note}</span>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

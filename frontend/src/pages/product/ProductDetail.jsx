@@ -278,6 +278,17 @@ export default function ProductDetail() {
               ) : null}
             </div>
 
+            <div className={styles.heroRatingRow}>
+              <StarRating value={product.averageRating || 0} readonly={true} size="small" />
+              <span className={styles.heroRatingText}>
+                {product.totalReviews > 0
+                  ? `${(product.averageRating || 0).toFixed(1)} rating from ${product.totalReviews} ${
+                      product.totalReviews === 1 ? "review" : "reviews"
+                    }`
+                  : "No reviews yet"}
+              </span>
+            </div>
+
             <div className={styles.priceSection}>
               <div className={styles.mainPrice}>Rs {finalPrice.toLocaleString("en-IN")}</div>
             </div>

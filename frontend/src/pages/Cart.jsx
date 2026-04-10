@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useCart from "../context/useCart";
 import QuantitySelector from "../components/common/QuantitySelector";
 import API from "../services/api";
 import "./Cart.css";
+
+const APPLIED_COUPON_STORAGE_KEY = "appliedCartCoupon";
 
 function Cart() {
   const navigate = useNavigate();
@@ -32,6 +34,38 @@ function Cart() {
   const grandTotal = subTotal + gst;
   const finalAmount = Math.max(grandTotal - discount, 0);
 
+  useEffect(() => {
+    const savedCoupon = sessionStorage.getItem(APPLIED_COUPON_STORAGE_KEY);
+    if (!savedCoupon) return;
+
+    try {
+      const parsedCoupon = JSON.parse(savedCoupon);
+      if (!parsedCoupon?.code || Number(parsedCoupon?.discount || 0) <= 0) {
+        sessionStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
+        return;
+      }
+
+      setCoupon(parsedCoupon.code);
+      setDiscount(Number(parsedCoupon.discount));
+      setCouponMessage("Coupon applied successfully.");
+      setCouponMessageType("success");
+    } catch {
+      sessionStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!coupon.trim() || discount <= 0) return;
+
+    sessionStorage.setItem(
+      APPLIED_COUPON_STORAGE_KEY,
+      JSON.stringify({
+        code: coupon.trim(),
+        discount,
+      })
+    );
+  }, [coupon, discount]);
+
   const applyCoupon = async () => {
     if (couponLoading || !coupon.trim()) return;
 
@@ -46,10 +80,18 @@ function Cart() {
       setDiscount(res.data.discount);
       setCouponMessage("Coupon applied successfully.");
       setCouponMessageType("success");
+      sessionStorage.setItem(
+        APPLIED_COUPON_STORAGE_KEY,
+        JSON.stringify({
+          code: coupon.trim(),
+          discount: Number(res.data.discount || 0),
+        })
+      );
     } catch (err) {
       setDiscount(0);
       setCouponMessage(err.response?.data?.message || "Invalid coupon");
       setCouponMessageType("error");
+      sessionStorage.removeItem(APPLIED_COUPON_STORAGE_KEY);
     } finally {
       setCouponLoading(false);
     }
@@ -256,7 +298,19 @@ function Cart() {
               <button
                 type="button"
                 className="cart-action-btn cart-checkout-btn"
-                onClick={() => navigate("/checkout", { state: { from: "/cart" } })}
+                onClick={() =>
+                  navigate("/checkout", {
+                    state: {
+                      from: "/cart",
+                      appliedCoupon: coupon.trim()
+                        ? {
+                            code: coupon.trim(),
+                            discount,
+                          }
+                        : null,
+                    },
+                  })
+                }
               >
                 Proceed to Checkout
               </button>

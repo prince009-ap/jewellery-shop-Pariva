@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import DatePicker from "../../components/common/DatePicker";
 import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import "./AddBanner.css";
@@ -146,21 +147,31 @@ export default function AddBanner() {
 
             <div className="field-group">
               <label>Campaign Start Date</label>
-              <input type="date" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+              <DatePicker value={startAt} onChange={(e) => setStartAt(e.target.value)} />
             </div>
 
             <div className="field-group">
               <label>Campaign End Date</label>
-              <input type="date" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
+              <DatePicker value={endAt} onChange={(e) => setEndAt(e.target.value)} />
             </div>
 
             <div className="field-group field-file">
               <label>Desktop Banner Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setDesktop(e.target.files?.[0] || null)}
-              />
+              <div className="ui-file-field">
+                <label className={`ui-file-shell ${desktop ? "has-file" : ""}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="ui-file-input"
+                    onChange={(e) => setDesktop(e.target.files?.[0] || null)}
+                  />
+                  <span className="ui-file-trigger">{desktop ? "Change Image" : "Choose Image"}</span>
+                  <span className="ui-file-copy">
+                    <span className="ui-file-name">{desktop?.name || "No image selected yet"}</span>
+                    <span className="ui-file-caption">Use a clear desktop banner image for the campaign.</span>
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 

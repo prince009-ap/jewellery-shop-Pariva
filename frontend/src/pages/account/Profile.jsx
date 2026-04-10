@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DatePicker from "../../components/common/DatePicker";
 import SelectDropdown from "../../components/common/SelectDropdown";
 import API from "../../services/api";
 
@@ -129,6 +130,19 @@ export default function Profile() {
     });
   };
 
+  const profileInputStyle = {
+    width: "100%",
+    minHeight: "52px",
+    padding: "0.95rem 1rem",
+    border: "1px solid #cbd5e1",
+    borderRadius: "14px",
+    fontSize: "0.95rem",
+    color: "#334155",
+    background: "linear-gradient(180deg, #ffffff 0%, #fffdfa 100%)",
+    outline: "none",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)"
+  };
+
   if (loading) {
     return (
       <div style={{ padding: "2rem", textAlign: "center" }}>
@@ -202,13 +216,7 @@ export default function Profile() {
                   name="name"
                   value={editForm.name}
                   onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem"
-                  }}
+                  style={profileInputStyle}
                 />
               ) : (
                 <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
@@ -241,13 +249,7 @@ export default function Profile() {
                   name="mobile"
                   value={editForm.mobile}
                   onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem"
-                  }}
+                  style={profileInputStyle}
                 />
               ) : (
                 <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
@@ -287,19 +289,13 @@ export default function Profile() {
                 Date of Birth
               </label>
               {isEditing ? (
-                <input
-                  type="date"
-                  name="dob"
-                  value={editForm.dob}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem"
-                  }}
-                />
+                <div style={{ width: "100%" }}>
+                  <DatePicker
+                    name="dob"
+                    value={editForm.dob}
+                    onChange={handleInputChange}
+                  />
+                </div>
               ) : (
                 <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
                   {formatDate(user.dob)}

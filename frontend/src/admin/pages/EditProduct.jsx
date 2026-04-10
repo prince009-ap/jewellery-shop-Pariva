@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
 import { METAL_TYPES, OCCASION_TYPES, PRODUCT_CATEGORIES } from "../../constants/productOptions";
@@ -7,6 +7,7 @@ import "./EditProduct.css";
 function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -219,7 +220,31 @@ function EditProduct() {
 
               <div className="field-group full-span">
                 <label>Product Image (optional)</label>
-                <input type="file" name="image" accept="image/*" onChange={handleChange} />
+                <div className="ui-file-field">
+                  <label className={`ui-file-shell ${form.image ? "has-file" : ""}`}>
+                    <input
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      className="ui-file-input"
+                      ref={fileInputRef}
+                      onChange={handleChange}
+                    />
+                    <span className="ui-file-trigger">
+                      {form.image ? "Change Image" : currentImage ? "Replace Image" : "Choose Image"}
+                    </span>
+                    <span className="ui-file-copy">
+                      <span className="ui-file-name">
+                        {form.image?.name || currentImage || "No new image selected"}
+                      </span>
+                      <span className="ui-file-caption">
+                        {currentImage && !form.image
+                          ? "Current product image will stay until you choose a replacement."
+                          : "Upload a product image if you want to update it."}
+                      </span>
+                    </span>
+                  </label>
+                </div>
 
                 {previewUrl ? (
                   <div className="preview-wrap">

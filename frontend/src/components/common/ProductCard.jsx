@@ -1,8 +1,8 @@
-import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useCart from "../../context/useCart";
 import QuantitySelector from "./QuantitySelector";
 import WishlistHeart from "../wishlist/WishlistHeart";
+import StarRating from "../StarRating";
 
 function ProductCard({ product }) {
   const { cart, addToCart, updateQty } = useCart();
@@ -10,10 +10,10 @@ function ProductCard({ product }) {
 
   if (!product?._id) return null;
 
-  const cartItem = cart.find(
-    (item) => item.product && item.product._id === product._id
-  );
+  const cartItem = cart.find((item) => item.product && item.product._id === product._id);
   const qty = cartItem?.qty || 0;
+  const ratingValue = Number(product.averageRating || 0);
+  const totalReviews = Number(product.totalReviews || 0);
 
   const handleBuyNow = () => {
     navigate("/checkout", {
@@ -44,10 +44,17 @@ function ProductCard({ product }) {
 
       <div className="product-info">
         <h3>{product.name}</h3>
-        <p>{product.metal} • {product.occasion}</p>
+        <p>{product.metal} | {product.occasion}</p>
+
+        <div className="product-rating-row">
+          <StarRating value={ratingValue} readonly size="small" />
+          <span className="product-rating-text">
+            {totalReviews > 0 ? `${ratingValue.toFixed(1)} (${totalReviews})` : "No reviews yet"}
+          </span>
+        </div>
 
         <div className="product-footer">
-          <div className="product-price">₹{product.price.toLocaleString("en-IN")}</div>
+          <div className="product-price">Rs {product.price.toLocaleString("en-IN")}</div>
           <WishlistHeart product={product} />
 
           {qty === 0 ? (
@@ -60,10 +67,7 @@ function ProductCard({ product }) {
               </button>
             </div>
           ) : (
-            <QuantitySelector
-              value={qty}
-              onChange={(newQty) => updateQty(product._id, newQty)}
-            />
+            <QuantitySelector value={qty} onChange={(newQty) => updateQty(product._id, newQty)} />
           )}
         </div>
       </div>
@@ -71,4 +75,5 @@ function ProductCard({ product }) {
   );
 }
 
+export { ProductCard };
 export default ProductCard;

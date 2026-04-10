@@ -86,15 +86,28 @@ export default function AdminLiveChat() {
   const fileInputRef = useRef(null);
 
   const activeId = activeConversation?._id;
+  const currentAdminId = admin?._id || admin?.id || null;
   const assignedAgentId = activeConversation?.assignedAgent?._id || activeConversation?.assignedAgent;
   const isAssignedToCurrentAdmin =
-    Boolean(assignedAgentId) && String(assignedAgentId) === String(admin?._id);
+    Boolean(assignedAgentId) && Boolean(currentAdminId) && String(assignedAgentId) === String(currentAdminId);
+  const canTakeOver =
+    Boolean(activeConversation) &&
+    (!activeConversation?.assignedAgent ||
+      activeConversation?.handoverRequested ||
+      activeConversation?.mode === "waiting_agent" ||
+      isAssignedToCurrentAdmin);
 
   const canReply = useMemo(() => {
     if (!activeConversation) return false;
     if (!activeConversation.assignedAgent) return true;
     return isAssignedToCurrentAdmin;
   }, [activeConversation, isAssignedToCurrentAdmin]);
+
+  const emitSeen = () => {
+    if (!activeId || !socketRef.current) return;
+    if (document.visibilityState !== "visible") return;
+    socketRef.current.emit("chat:seen", { conversationId: activeId });
+  };
 
   useEffect(() => {
     activeIdRef.current = activeId || null;
@@ -183,9 +196,36 @@ export default function AdminLiveChat() {
   useEffect(() => {
     if (activeId && socketRef.current) {
       socketRef.current.emit("chat:join", { conversationId: activeId });
-      socketRef.current.emit("chat:seen", { conversationId: activeId });
+      emitSeen();
     }
   }, [activeId]);
+
+  useEffect(() => {
+    if (!activeId || !socketRef.current) {
+      return undefined;
+    }
+
+    emitSeen();
+    window.addEventListener("focus", emitSeen);
+    document.addEventListener("visibilitychange", emitSeen);
+
+    return () => {
+      window.removeEventListener("focus", emitSeen);
+      document.removeEventListener("visibilitychange", emitSeen);
+    };
+  }, [activeId]);
+
+  useEffect(() => {
+    if (!activeId) return;
+
+    const hasUnreadIncoming = messages.some(
+      (message) => message.sender === "user" && message.status !== "seen"
+    );
+
+    if (hasUnreadIncoming) {
+      emitSeen();
+    }
+  }, [messages, activeId]);
 
   const openConversation = async (conversationId) => {
     setErrorMessage("");
@@ -200,11 +240,13 @@ export default function AdminLiveChat() {
     if (!activeId) return;
     try {
       setErrorMessage("");
-      const conversation = await claimAdminConversation(activeId);
-      setActiveConversation(conversation);
+      await claimAdminConversation(activeId);
+      const detail = await getAdminConversation(activeId);
+      setActiveConversation(detail.conversation);
+      setMessages((current) => mergeMessages(current, detail.messages || []));
       const refreshed = await getAdminConversations();
       setConversations(refreshed);
-      return conversation;
+      return detail.conversation;
     } catch (error) {
       setErrorMessage(
         error.response?.data?.message || "This chat is already assigned to another agent."
@@ -354,9 +396,9 @@ export default function AdminLiveChat() {
                   <button
                     type="button"
                     onClick={handleClaim}
-                    disabled={Boolean(activeConversation.assignedAgent && !canReply)}
+                    disabled={!canTakeOver}
                   >
-                    {canReply ? "Assigned to you" : "Take over"}
+                    {isAssignedToCurrentAdmin ? "Assigned to you" : "Take over"}
                   </button>
                 </div>
               </header>
@@ -440,6 +482,7 @@ export default function AdminLiveChat() {
                       if (!activeConversation?.assignedAgent) {
                         void handleClaim();
                       }
+                      emitSeen();
                     }}
                     onChange={(event) => {
                       setDraft(event.target.value);

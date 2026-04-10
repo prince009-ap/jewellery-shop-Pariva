@@ -145,7 +145,7 @@ function ProductList() {
               <tbody>
                 {sortedProducts.map((p) => (
                   <tr key={p._id}>
-                    <td>
+                    <td data-label="Image">
                       <div className="product-thumb-wrap">
                         <img
                           src={`http://localhost:5000/uploads/${p.image}`}
@@ -155,13 +155,15 @@ function ProductList() {
                       </div>
                     </td>
 
-                    <td className="product-name-cell">{p.name}</td>
-                    <td>{p.category}</td>
-                    <td>{p.metal}</td>
-                    <td>{p.occasion}</td>
-                    <td>Rs {p.price}</td>
-                    <td>{p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "N/A"}</td>
-                    <td>
+                    <td className="product-name-cell" data-label="Name">{p.name}</td>
+                    <td data-label="Category">{p.category}</td>
+                    <td data-label="Metal">{p.metal}</td>
+                    <td data-label="Occasion">{p.occasion}</td>
+                    <td data-label="Price">Rs {p.price}</td>
+                    <td data-label="Added On">
+                      {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "N/A"}
+                    </td>
+                    <td data-label="Actions">
                       <div className="product-actions-cell">
                         <Link to={`/admin/products/edit/${p._id}`}>
                           <button className="product-pill-btn edit-btn">Edit</button>

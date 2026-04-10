@@ -329,6 +329,26 @@
   box-shadow: none;
 }
 
+@media (max-width: 1180px) {
+  .banner-manager-page {
+    padding: 18px;
+  }
+
+  .banner-manager-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .banner-table {
+    min-width: 640px;
+  }
+
+  .banner-preview-wrap {
+    width: 144px;
+    height: 92px;
+  }
+}
+
 @media (max-width: 900px) {
   .banner-manager-page {
     padding: 16px;

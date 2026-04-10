@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
   LineChart,
@@ -12,6 +13,7 @@ import adminAPI from "../../services/adminApi";
 import "./AdminDashboard.css";
 
 function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [analytics, setAnalytics] = useState([]);
 
@@ -44,17 +46,38 @@ function AdminDashboard() {
     );
   }
 
+  const getAgeInDays = (dateValue) =>
+    Math.max(0, Math.floor((Date.now() - new Date(dateValue).getTime()) / (1000 * 60 * 60 * 24)));
+
   const statItems = [
-    { title: "Total Products", value: stats.totalProducts },
-    { title: "Total Orders", value: stats.totalOrders },
-    { title: "Total Users", value: stats.totalUsers },
-    { title: "Today's Revenue", value: `Rs ${(stats.todayRevenue || 0).toLocaleString("en-IN")}` },
-    { title: "New Users Today", value: stats.todayUsers },
-    { title: "New Products Today", value: stats.todayProducts },
-    { title: "Users (Last 7 Days)", value: stats.last7DaysUsers },
-    { title: "Products (Last 7 Days)", value: stats.last7DaysProducts },
-    { title: "Total Coupons", value: stats.totalCoupons },
-    { title: "Total Revenue", value: `Rs ${(stats.totalRevenue || 0).toLocaleString("en-IN")}` },
+    { title: "Total Products", value: stats.totalProducts, onClick: () => navigate("/admin/products") },
+    { title: "Total Orders", value: stats.totalOrders, onClick: () => navigate("/admin/orders") },
+    { title: "Total Users", value: stats.totalUsers, onClick: () => navigate("/admin/users") },
+    {
+      title: "Overdue Orders",
+      value: stats.overdueOrdersCount || 0,
+      onClick: () => navigate("/admin/orders?sort=overdue"),
+    },
+    {
+      title: "Delayed Shipments",
+      value: stats.delayedShippedOrdersCount || 0,
+      onClick: () => navigate("/admin/orders?sort=delayed_shipped"),
+    },
+    {
+      title: "Today's Revenue",
+      value: `Rs ${(stats.todayRevenue || 0).toLocaleString("en-IN")}`,
+      onClick: () => navigate("/admin/orders"),
+    },
+    { title: "New Users Today", value: stats.todayUsers, onClick: () => navigate("/admin/users") },
+    { title: "New Products Today", value: stats.todayProducts, onClick: () => navigate("/admin/products") },
+    { title: "Users (Last 7 Days)", value: stats.last7DaysUsers, onClick: () => navigate("/admin/users") },
+    { title: "Products (Last 7 Days)", value: stats.last7DaysProducts, onClick: () => navigate("/admin/products") },
+    { title: "Total Coupons", value: stats.totalCoupons, onClick: () => navigate("/admin/coupons") },
+    {
+      title: "Total Revenue",
+      value: `Rs ${(stats.totalRevenue || 0).toLocaleString("en-IN")}`,
+      onClick: () => navigate("/admin/orders"),
+    },
   ];
 
   return (
@@ -72,7 +95,7 @@ function AdminDashboard() {
 
         <section className="dashboard-grid">
           {statItems.map((item) => (
-            <StatCard key={item.title} title={item.title} value={item.value} />
+            <StatCard key={item.title} title={item.title} value={item.value} onClick={item.onClick} />
           ))}
         </section>
 
@@ -118,6 +141,74 @@ function AdminDashboard() {
           </section>
         )}
 
+        {stats.overdueOrdersCount > 0 && (
+          <section className="admin-panel-card overdue-orders-card">
+            <h3>Overdue Orders</h3>
+            <p className="overdue-orders-copy">
+              Orders older than 7 days that are still pending or confirmed need admin action.
+            </p>
+            <div className="overdue-orders-list">
+              {(stats.overdueOrders || []).map((order) => {
+                const orderAgeDays = Math.max(
+                  0,
+                  Math.floor((Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+                );
+
+                return (
+                  <button
+                    key={order._id}
+                    type="button"
+                    className="overdue-order-item"
+                    onClick={() => navigate(`/admin/orders/${order._id}`)}
+                  >
+                    <div>
+                      <strong>#{order._id.slice(-8).toUpperCase()}</strong>
+                      <p>{order.user?.name || "Customer"} | {order.orderStatus}</p>
+                    </div>
+                    <div className="overdue-order-meta">
+                      <span>{orderAgeDays} days old</span>
+                      <strong>Rs {Number(order.priceBreakup?.totalAmount || 0).toLocaleString("en-IN")}</strong>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {stats.delayedShippedOrdersCount > 0 && (
+          <section className="admin-panel-card delayed-shipments-card">
+            <h3>Shipped But Not Delivered</h3>
+            <p className="overdue-orders-copy">
+              These orders were shipped days ago but are still not marked delivered.
+            </p>
+            <div className="overdue-orders-list">
+              {(stats.delayedShippedOrders || []).map((order) => {
+                const referenceDate = order.shipmentTracking?.lastUpdatedAt || order.updatedAt || order.createdAt;
+                const shipmentAgeDays = getAgeInDays(referenceDate);
+
+                return (
+                  <button
+                    key={order._id}
+                    type="button"
+                    className="overdue-order-item delayed-shipment-item"
+                    onClick={() => navigate(`/admin/orders/${order._id}`)}
+                  >
+                    <div>
+                      <strong>#{order._id.slice(-8).toUpperCase()}</strong>
+                      <p>{order.user?.name || "Customer"} | {order.orderStatus}</p>
+                    </div>
+                    <div className="overdue-order-meta">
+                      <span>{shipmentAgeDays} days since shipped</span>
+                      <strong>Rs {Number(order.priceBreakup?.totalAmount || 0).toLocaleString("en-IN")}</strong>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         <section className="admin-panel-card">
           <div className="panel-head">
             <h3>Platform Growth (Last 7 Days)</h3>
@@ -160,12 +251,12 @@ function AdminDashboard() {
   );
 }
 
-function StatCard({ title, value }) {
+function StatCard({ title, value, onClick }) {
   return (
-    <div className="dashboard-card">
+    <button type="button" className="dashboard-card dashboard-card-button" onClick={onClick}>
       <p className="card-title">{title}</p>
       <h3 className="card-value">{value}</h3>
-    </div>
+    </button>
   );
 }
 

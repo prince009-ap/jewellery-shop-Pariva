@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
 import "./AdminOrders.css";
 
 function AdminOrders() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState("latest");
+  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "latest");
   const [pendingRemove, setPendingRemove] = useState(null);
   const [removeLoading, setRemoveLoading] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState("");
@@ -29,6 +30,11 @@ function AdminOrders() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    const nextSort = searchParams.get("sort") || "latest";
+    setSortBy(nextSort);
+  }, [searchParams]);
 
   const updateStatus = async (orderId, newStatus) => {
     try {
@@ -96,6 +102,30 @@ function AdminOrders() {
     });
   };
 
+  const getOrderAgeInDays = (dateString) => {
+    const createdAt = new Date(dateString);
+    const diffMs = Date.now() - createdAt.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
+  const getShippedAgeInDays = (order) => {
+    const shippedEntry = [...(order?.trackingHistory || [])]
+      .reverse()
+      .find((entry) => String(entry.status || "").toLowerCase() === "shipped");
+    const referenceDate = shippedEntry?.date || order?.shipmentTracking?.lastUpdatedAt || order?.updatedAt || order?.createdAt;
+    return getOrderAgeInDays(referenceDate);
+  };
+
+  const isOverdueOrder = (order) => {
+    const status = String(order?.orderStatus || "").toLowerCase();
+    return ["pending", "confirmed"].includes(status) && getOrderAgeInDays(order.createdAt) >= 7;
+  };
+
+  const isDelayedShipment = (order) => {
+    const status = String(order?.orderStatus || "").toLowerCase();
+    return status === "shipped" && getShippedAgeInDays(order) >= 7;
+  };
+
   const getOrderImageSrc = (order) => {
     const image = order.items?.[0]?.image;
     return image ? `http://localhost:5000/uploads/${image}` : "";
@@ -105,6 +135,14 @@ function AdminOrders() {
     const arr = [...orders];
 
     switch (sortBy) {
+      case "overdue":
+        return arr
+          .filter((order) => isOverdueOrder(order))
+          .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      case "delayed_shipped":
+        return arr
+          .filter((order) => isDelayedShipment(order))
+          .sort((a, b) => getShippedAgeInDays(b) - getShippedAgeInDays(a));
       case "oldest":
         arr.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
         break;
@@ -179,10 +217,16 @@ function AdminOrders() {
             <SelectDropdown
               id="order-sort"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                const nextSort = e.target.value;
+                setSortBy(nextSort);
+                setSearchParams(nextSort === "latest" ? {} : { sort: nextSort });
+              }}
               options={[
                 { value: "latest", label: "Latest Orders" },
                 { value: "oldest", label: "Oldest Orders" },
+                { value: "overdue", label: "Overdue Orders" },
+                { value: "delayed_shipped", label: "Delayed Shipped Orders" },
                 { value: "amount_high", label: "Amount High-Low" },
                 { value: "amount_low", label: "Amount Low-High" },
                 { value: "status", label: "Status A-Z" },
@@ -197,9 +241,13 @@ function AdminOrders() {
             const statusBadge = getStatusBadge(order.orderStatus);
             const nextStatuses = getNextStatuses(order.orderStatus);
             const isUpdating = updatingOrderId === order._id;
+            const orderAgeDays = getOrderAgeInDays(order.createdAt);
+            const isOverdue = isOverdueOrder(order);
+            const isDelayedShipped = isDelayedShipment(order);
+            const shippedAgeDays = getShippedAgeInDays(order);
 
             return (
-              <article className="ao-card" key={order._id}>
+              <article className={`ao-card ${isOverdue ? "ao-card-overdue" : ""} ${isDelayedShipped ? "ao-card-shipped-delay" : ""}`} key={order._id}>
                 <div className="ao-head">
                   <div className="ao-head-main">
                     {order.items?.[0]?.image ? (
@@ -246,6 +294,23 @@ function AdminOrders() {
                 <p className="ao-date-row">
                   <strong>Order Date:</strong> {formatDate(order.createdAt)}
                 </p>
+
+                <div className="ao-alert-row">
+                  <span className={`ao-age-pill ${isOverdue ? "overdue" : isDelayedShipped ? "shipped-delay" : ""}`}>
+                    {isDelayedShipped
+                      ? `${shippedAgeDays} day${shippedAgeDays === 1 ? "" : "s"} since shipped`
+                      : `${orderAgeDays} day${orderAgeDays === 1 ? "" : "s"} old`}
+                  </span>
+                  {isOverdue ? (
+                    <span className="ao-overdue-note">
+                      Overdue: dispatch pending. Move this order to shipped or update customer.
+                    </span>
+                  ) : isDelayedShipped ? (
+                    <span className="ao-shipped-delay-note">
+                      Delayed shipment: mark this order delivered if customer already received it.
+                    </span>
+                  ) : null}
+                </div>
 
                 <div className="ao-actions">
                   {nextStatuses.map((status) => (

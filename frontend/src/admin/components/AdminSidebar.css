@@ -432,12 +432,28 @@
   transition: all var(--transition-speed) ease;
 }
 
+.admin-sidebar.collapsed ~ .admin-main-content {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
 .admin-main-content.sidebar-collapsed {
   margin-left: var(--sidebar-width-collapsed);
 }
 
 @media (max-width: 1023px) {
   .admin-main-content {
+    margin-left: var(--sidebar-width-collapsed);
+  }
+
+  .admin-sidebar.open ~ .admin-main-content {
+    margin-left: var(--sidebar-width);
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-main-content,
+  .admin-sidebar.collapsed ~ .admin-main-content,
+  .admin-sidebar.open ~ .admin-main-content {
     margin-left: 0;
   }
 }

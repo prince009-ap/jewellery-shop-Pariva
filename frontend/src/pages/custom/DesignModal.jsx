@@ -186,13 +186,15 @@ export default function DesignModal({ design, onClose, onUpdate, onNotify }) {
               value={reason}
             />
             <div className="acd-reject-tools">
-              <label className="acd-suggest-toggle">
+              <label className="acd-suggest-toggle ui-check-label">
                 <input
                   type="checkbox"
+                  className="ui-check-input"
                   checked={suggestAlternative}
                   onChange={(e) => setSuggestAlternative(e.target.checked)}
                 />
-                Suggest alternative option
+                <span className="ui-check-box" aria-hidden="true"></span>
+                <span className="ui-check-text">Suggest alternative option</span>
               </label>
             </div>
             {suggestAlternative && (

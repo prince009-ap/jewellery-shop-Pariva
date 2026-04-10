@@ -105,6 +105,12 @@
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
+.dashboard-card-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
 .dashboard-card:hover {
   transform: translateY(-3px);
   border-color: #d0dae7;
@@ -234,6 +240,87 @@
   margin-bottom: 6px;
 }
 
+.overdue-orders-card {
+  background: linear-gradient(135deg, #fff7f7 0%, #fffdfb 100%);
+  border: 1px solid #f3c7cd;
+}
+
+.delayed-shipments-card {
+  background: linear-gradient(135deg, #f4f8ff 0%, #fdfefe 100%);
+  border: 1px solid #c7daf8;
+}
+
+.delayed-shipments-card h3 {
+  margin: 0 0 8px;
+  color: #1d4ed8;
+}
+
+.overdue-orders-card h3 {
+  margin: 0 0 8px;
+  color: #b42318;
+}
+
+.overdue-orders-copy {
+  margin: 0 0 14px;
+  color: #7a3340;
+}
+
+.overdue-orders-list {
+  display: grid;
+  gap: 10px;
+}
+
+.overdue-order-item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  border: 1px solid #f7d6da;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.overdue-order-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(180, 35, 24, 0.08);
+}
+
+.delayed-shipment-item {
+  border-color: #d5e3fb;
+}
+
+.delayed-shipment-item:hover {
+  box-shadow: 0 10px 20px rgba(29, 78, 216, 0.08);
+}
+
+.overdue-order-item p {
+  margin: 6px 0 0;
+  color: #6f4a53;
+  text-transform: capitalize;
+}
+
+.overdue-order-meta {
+  text-align: right;
+}
+
+.overdue-order-meta span {
+  display: block;
+  color: #b42318;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.overdue-order-meta strong {
+  display: block;
+  margin-top: 4px;
+  color: #20354f;
+}
+
 .rate-form-row {
   margin-top: 14px;
   display: grid;
@@ -328,6 +415,29 @@
   }
 }
 
+@media (max-width: 1180px) {
+  .admin-dashboard-page {
+    padding: 18px;
+  }
+
+  .admin-dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recent-products-table {
+    min-width: 560px;
+  }
+
+  .chart-area {
+    height: 280px;
+  }
+}
+
 @media (max-width: 768px) {
   .admin-dashboard-shell {
     gap: 16px;
@@ -364,6 +474,15 @@
 
   .recent-products-table {
     font-size: 0.85rem;
+  }
+
+  .overdue-order-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .overdue-order-meta {
+    text-align: left;
   }
 
   .recent-products-table th,

@@ -54,7 +54,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 3rem;
-  padding: 60px 80px;
+  padding: clamp(36px, 5vw, 60px) clamp(18px, 6vw, 80px);
 }
 
 /* Footer Sections */
@@ -362,7 +362,7 @@
 /* Bottom Bar */
 .footer-bottom {
   background: rgba(255, 255, 255, 0.45);
-  padding: 1.5rem 80px;
+  padding: 1.5rem clamp(18px, 6vw, 80px);
   border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
 
@@ -503,7 +503,6 @@
   .footer-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
-    padding: 40px 20px;
   }
   
   .brand-section {
@@ -519,7 +518,6 @@
     flex-direction: column;
     text-align: center;
     gap: 1rem;
-    padding: 1.5rem 20px;
   }
   
   .social-links {
@@ -527,12 +525,12 @@
   }
   
   .contact-info {
-    align-items: center;
+    align-items: stretch;
   }
   
   .contact-item {
-    justify-content: center;
-    text-align: center;
+    justify-content: flex-start;
+    text-align: left;
   }
   
   .newsletter-form {
@@ -559,10 +557,6 @@
 }
 
 @media (max-width: 480px) {
-  .footer-grid {
-    padding: 30px 15px;
-  }
-  
   .brand-text {
     font-size: 1.3rem;
   }
@@ -578,5 +572,14 @@
   .newsletter-input,
   .newsletter-button {
     width: 100%;
+  }
+
+  .footer-bottom-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .contact-item {
+    padding: 0.75rem;
   }
 }

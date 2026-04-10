@@ -95,10 +95,14 @@ export async function assignConversationToAgent(conversationId, adminId) {
     throw error;
   }
 
-  if (
+  const assignedToDifferentAdmin =
     conversation.assignedAgent &&
-    conversation.assignedAgent.toString() !== adminId.toString()
-  ) {
+    conversation.assignedAgent.toString() !== adminId.toString();
+
+  const canForceTakeover =
+    conversation.handoverRequested || conversation.mode === "waiting_agent";
+
+  if (assignedToDifferentAdmin && !canForceTakeover) {
     const error = new Error("This chat is already assigned to another agent");
     error.status = 409;
     throw error;

@@ -634,15 +634,27 @@ export default function CustomDesignForm() {
                     </div>
                   </div>
 
-                  <div className="form-section">
-                    <h2 className="section-title">Reference Image (Optional)</h2>
-                    <div className="field">
-                      <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} className="file-input" />
-                      {imagePreview && (
-                        <div className="custom-image-preview-wrap">
-                          <img src={imagePreview} alt="Reference preview" className="custom-image-preview" />
-                        </div>
-                      )}
+                    <div className="form-section">
+                      <h2 className="section-title">Reference Image (Optional)</h2>
+                      <div className="field ui-file-field">
+                        <label className={`ui-file-shell ${image ? "has-file" : ""}`}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="ui-file-input"
+                            onChange={(e) => setImage(e.target.files[0])}
+                          />
+                          <span className="ui-file-trigger">{image ? "Change Image" : "Choose Image"}</span>
+                          <span className="ui-file-copy">
+                            <span className="ui-file-name">{image?.name || "No reference image selected"}</span>
+                            <span className="ui-file-caption">Optional: share a sample image to explain your design idea.</span>
+                          </span>
+                        </label>
+                        {imagePreview && (
+                          <div className="custom-image-preview-wrap">
+                            <img src={imagePreview} alt="Reference preview" className="custom-image-preview" />
+                          </div>
+                        )}
                     </div>
                   </div>
 

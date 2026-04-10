@@ -1,12 +1,12 @@
-import { useEffect } from "react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import API from "../../services/api";
 import { useAdminAuth } from "../../context/AdminAuthContext";
+import "../auth.css";
 
 function AdminLogin() {
   const navigate = useNavigate();
-  const { setAdmin } = useAdminAuth();
+  const { admin, setAdmin } = useAdminAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,23 +14,19 @@ function AdminLogin() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-const { admin } = useAdminAuth();
 
-useEffect(() => {
-  const hasToken = Boolean(sessionStorage.getItem("adminToken"));
-  if (admin || hasToken) {
-    navigate("/admin/dashboard", { replace: true });
-  }
+  useEffect(() => {
+    const hasToken = Boolean(sessionStorage.getItem("adminToken"));
+    if (admin || hasToken) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [admin, navigate]);
 
-}, [admin, navigate]);
-
-
-  // STEP 1: Email + Password
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError("");
     if (loading) return;
-    
+
     try {
       setLoading(true);
       await API.post("/admin/login", { email, password });
@@ -42,12 +38,11 @@ useEffect(() => {
     }
   };
 
-  // STEP 2: Email OTP
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setError("");
     if (loading) return;
-    
+
     try {
       setLoading(true);
       const res = await API.post("/admin/verify-otp", {
@@ -55,7 +50,7 @@ useEffect(() => {
         emailOtp,
       });
 
-        sessionStorage.setItem("adminToken", res.data.token);
+      sessionStorage.setItem("adminToken", res.data.token);
       setAdmin(res.data.admin);
       navigate("/admin/dashboard", { replace: true });
     } catch (err) {
@@ -67,94 +62,163 @@ useEffect(() => {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2>Admin Login</h2>
-        {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className="auth-shell auth-shell-admin auth-shell-compact">
+        <aside className="auth-showcase">
+          <div className="auth-showcase-copy">
+            <span className="auth-eyebrow">Admin Portal</span>
+            <h1>Operations access with a sharper control-room feel.</h1>
+            <p>
+              Review orders, users, products, banners, and support activity from a secure OTP-backed
+              admin entrance.
+            </p>
+            <ul className="auth-showcase-points">
+              <li>Separate admin tone while still matching the storefront identity.</li>
+              <li>Password and OTP flow protects dashboard access before session creation.</li>
+              <li>Responsive layout keeps the control entry clean on every screen size.</li>
+            </ul>
+          </div>
 
-        {step === 1 && (
-          <form onSubmit={handlePasswordSubmit}>
-            <input
-              type="email"
-              placeholder="Admin Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              required
-            />
-            <button 
-              type="submit"
-              disabled={loading}
-              className={loading ? 'button-loading' : ''}
-              style={{ 
-                opacity: loading ? 0.7 : 1,
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? (
-                <span className="button-loading-content">
-                  <span className="loading-spinner-small"></span>
-                  Verifying...
-                </span>
-              ) : (
-                'Verify Password'
-              )}
-            </button>
-          </form>
-        )}
+          <div className="auth-showcase-stats">
+            <div className="auth-showcase-stat">
+              <strong>2FA</strong>
+              <span>OTP Guard</span>
+            </div>
+            <div className="auth-showcase-stat">
+              <strong>Live</strong>
+              <span>Ops Access</span>
+            </div>
+            <div className="auth-showcase-stat">
+              <strong>Fast</strong>
+              <span>Dashboard Entry</span>
+            </div>
+          </div>
+        </aside>
 
-        {step === 2 && (
-          <form onSubmit={handleOtpSubmit}>
-            <input
-              placeholder="Enter Email OTP"
-              value={emailOtp}
-              onChange={(e) => setEmailOtp(e.target.value)}
-              disabled={loading}
-              required
-            />
-            <button 
-              type="submit"
-              disabled={loading}
-              className={loading ? 'button-loading' : ''}
-              style={{ 
-                opacity: loading ? 0.7 : 1,
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? (
-                <span className="button-loading-content">
-                  <span className="loading-spinner-small"></span>
-                  Verifying...
-                </span>
-              ) : (
-                'Verify OTP'
-              )}
-            </button>
-          </form>
-        )}
+        <div className="auth-card">
+          <div className="auth-header">
+            <div className="auth-header-top">
+              <span className="auth-kicker">Admin Login</span>
+              <span className="auth-step-badge">{step === 1 ? "Step 1 of 2" : "Step 2 of 2"}</span>
+            </div>
+            <h2>{step === 1 ? "Enter admin credentials" : "Confirm your OTP"}</h2>
+            <p>
+              {step === 1
+                ? "Use your admin email and password to start the secure verification flow."
+                : "Complete the email OTP step to unlock the admin dashboard session."}
+            </p>
+          </div>
 
-        <div style={{ marginTop: 16, textAlign: "center" }}>
-          <button
-            type="button"
-            onClick={() => navigate("/login")}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#1f2937",
-              textDecoration: "underline",
-              cursor: "pointer",
-              fontSize: "0.95rem",
-            }}
-          >
-            Login as User
-          </button>
+          <div className="auth-progress">
+            <div className={`auth-progress-step ${step === 1 ? "is-active" : ""}`}>
+              <strong>1</strong>
+              <span>Password</span>
+            </div>
+            <div className={`auth-progress-step ${step === 2 ? "is-active" : ""}`}>
+              <strong>2</strong>
+              <span>Email OTP</span>
+            </div>
+          </div>
+
+          {error && <div className="auth-error">{error}</div>}
+
+          {step === 1 && (
+            <form className="auth-form" onSubmit={handlePasswordSubmit}>
+              <div className="auth-field">
+                <label>Admin Email</label>
+                <input
+                  type="email"
+                  placeholder="admin@pariva.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div className="auth-field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter admin password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div className="auth-actions">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`auth-button ${loading ? "button-loading" : ""}`}
+                >
+                  {loading ? (
+                    <span className="button-loading-content">
+                      <span className="loading-spinner-small"></span>
+                      Verifying...
+                    </span>
+                  ) : (
+                    "Continue To OTP"
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {step === 2 && (
+            <form className="auth-form" onSubmit={handleOtpSubmit}>
+              <div className="auth-field">
+                <label>Email OTP</label>
+                <input
+                  className="auth-otp-input"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  value={emailOtp}
+                  onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
+                  disabled={loading}
+                  maxLength={6}
+                  required
+                />
+                <p className="auth-field-note">Enter the code delivered to the admin mailbox.</p>
+              </div>
+              <div className="auth-actions">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`auth-button ${loading ? "button-loading" : ""}`}
+                >
+                  {loading ? (
+                    <span className="button-loading-content">
+                      <span className="loading-spinner-small"></span>
+                      Verifying...
+                    </span>
+                  ) : (
+                    "Access Dashboard"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="auth-secondary-button"
+                  onClick={() => {
+                    setStep(1);
+                    setEmailOtp("");
+                    setError("");
+                  }}
+                  disabled={loading}
+                >
+                  Back To Credentials
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="auth-links">
+            <Link to="/login">Switch to customer login</Link>
+          </div>
+
+          <div className="auth-panel-footnote">
+            Admin access is kept separate from the customer experience, but styled to remain part of
+            the same PARIVA system.
+          </div>
         </div>
       </div>
     </div>

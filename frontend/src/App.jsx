@@ -31,8 +31,6 @@ import { CartProvider } from "./context/CartProvider";
 import { WishlistProvider } from "./context/WishlistContext";
 import LoaderProvider from "./context/LoaderProvider";
 import { useLoader } from "./context/useLoader";
-import { useAuth } from "./context/AuthContext";
-
 
 import AppRoutes from "./routes";
 import Loader from "./components/Loader";
@@ -41,7 +39,6 @@ import ChatWidget from "./components/chat/ChatWidget";
 
 function AppContent() {
   const { loading, setLoading } = useLoader();
-  const { user } = useAuth();
 
   useEffect(() => {
     registerLoader(setLoading);
