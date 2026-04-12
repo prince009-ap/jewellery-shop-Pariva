@@ -2,10 +2,13 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useWishlist } from "../../context/useWishlist";
 import WishlistModal from "./WishlistModal";
+import { getUserToken } from "../../utils/authStorage";
+import { useAuthPrompt } from "../../context/AuthPromptContext";
 
 function WishlistHeart({ product }) {
   const [open, setOpen] = useState(false);
   const { wishlists, removeFromWishlist } = useWishlist();
+  const { showAuthPrompt } = useAuthPrompt();
 
   const isInWishlist = wishlists.some((wl) =>
     wl.products?.some((p) => p._id === product?._id)
@@ -13,6 +16,11 @@ function WishlistHeart({ product }) {
 
   const handleClick = async (e) => {
     e.stopPropagation();
+
+    if (!getUserToken()) {
+      showAuthPrompt("Please sign in to save this design to your wishlist.");
+      return;
+    }
 
     if (isInWishlist) {
       const containingWishlist = wishlists.find((wl) =>

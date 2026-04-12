@@ -14,8 +14,10 @@ function SelectDropdown({
 }) {
   const rootRef = useRef(null);
   const inputRef = useRef(null);
+  const menuRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [menuStyle, setMenuStyle] = useState({});
 
   const normalizedOptions = useMemo(
     () =>
@@ -44,6 +46,42 @@ function SelectDropdown({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [searchable, selectedOption]);
+
+  useEffect(() => {
+    if (!isOpen || window.innerWidth >= 768) {
+      setMenuStyle({});
+      return undefined;
+    }
+
+    const updateMenuPosition = () => {
+      const shell = rootRef.current?.querySelector(".select-dropdown-shell");
+      if (!shell) return;
+
+      const rect = shell.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const compactWidth = viewportWidth < 768;
+      const desiredWidth = compactWidth
+        ? Math.min(Math.max(rect.width - 24, 128), 176)
+        : rect.width;
+      const maxLeft = viewportWidth - desiredWidth - 12;
+      const left = Math.max(12, Math.min(rect.left, maxLeft));
+
+      setMenuStyle({
+        top: rect.bottom + 8,
+        left,
+        width: desiredWidth,
+      });
+    };
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [isOpen]);
 
   const filteredOptions = useMemo(() => {
     if (!searchable) {
@@ -142,7 +180,7 @@ function SelectDropdown({
       </div>
 
       {isOpen ? (
-        <div className="select-dropdown-menu">
+        <div className="select-dropdown-menu" ref={menuRef} style={menuStyle}>
           {filteredOptions.length > 0 ? (
             filteredOptions.map((option) => (
               <button

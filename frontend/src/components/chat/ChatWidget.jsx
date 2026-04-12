@@ -91,6 +91,7 @@ export default function ChatWidget() {
   const scrollerRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
+  const shouldRaiseForCheckout = location.pathname.startsWith("/checkout");
 
   const title = useMemo(() => {
     if (conversation?.mode === "agent") return "Live Support";
@@ -331,7 +332,11 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className={`chat-widget-shell ${open ? "open" : ""}`}>
+    <div
+      className={`chat-widget-shell ${open ? "open" : ""} ${
+        shouldRaiseForCheckout ? "chat-widget-shell--raised" : ""
+      }`}
+    >
       {open ? (
         <section className="chat-widget-panel">
           <header className="chat-widget-header">

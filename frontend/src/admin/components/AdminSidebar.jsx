@@ -16,9 +16,13 @@ import {
 import "./AdminSidebar.css";
 
 function AdminSidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth >= 1024;
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
+  const showExpandedLabels = isOpen || isMobileOpen;
 
   // Close mobile sidebar when route changes
   useEffect(() => {
@@ -115,7 +119,7 @@ function AdminSidebar() {
         <div className="admin-sidebar-header">
           <div className="admin-sidebar-brand">
             <div className="admin-brand-icon">📿</div>
-            {isOpen && <span className="admin-brand-text">PARIVA</span>}
+            {showExpandedLabels && <span className="admin-brand-text">PARIVA</span>}
           </div>
         </div>
 
@@ -134,8 +138,8 @@ function AdminSidebar() {
                 <span className="admin-menu-icon">
                   <Icon size={20} />
                 </span>
-                {isOpen && <span className="admin-menu-label">{item.label}</span>}
-                {isOpen && active && <span className="admin-menu-indicator" />}
+                {showExpandedLabels && <span className="admin-menu-label">{item.label}</span>}
+                {showExpandedLabels && active && <span className="admin-menu-indicator" />}
               </Link>
             );
           })}
@@ -145,7 +149,7 @@ function AdminSidebar() {
         <div className="admin-sidebar-footer">
           <button className="admin-logout-btn" onClick={handleLogout} title="Logout">
             <MdLogout size={20} />
-            {isOpen && <span>Logout</span>}
+            {showExpandedLabels && <span>Logout</span>}
           </button>
         </div>
       </aside>

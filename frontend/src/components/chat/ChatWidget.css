@@ -9,6 +9,10 @@
   gap: 14px;
 }
 
+.chat-widget-shell--raised {
+  bottom: 112px;
+}
+
 .chat-launcher {
   border: none;
   border-radius: 999px;
@@ -251,6 +255,10 @@
     left: 12px;
     bottom: 12px;
     align-items: stretch;
+  }
+
+  .chat-widget-shell--raised {
+    bottom: 96px;
   }
 
   .chat-widget-panel {

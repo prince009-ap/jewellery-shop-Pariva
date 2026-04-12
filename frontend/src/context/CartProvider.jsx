@@ -3,9 +3,11 @@ import API from "../services/api";
 import { CartContext } from "./CartContext";
 import { useAuth } from "./AuthContext";
 import { getUserToken } from "../utils/authStorage";
+import { useAuthPrompt } from "./AuthPromptContext";
 
 export const CartProvider = ({ children }) => {
   const { token } = useAuth();
+  const { showAuthPrompt } = useAuthPrompt();
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 // 🔐 remove invalid items
@@ -39,11 +41,12 @@ const safeCart = cart.filter(item => item.product);
 const addToCart = async (productId, qty = 1) => {
   const activeToken = token || getUserToken();
   if (!activeToken) {
-    alert("Please login to add items to cart");
-    return;
+    showAuthPrompt("Please sign in to add this piece to your cart.");
+    return { ok: false, requiresAuth: true };
   }
   await API.post("/cart/add", { productId, qty });
   fetchCart();
+  return { ok: true };
 };
 
 const updateQty = async (productId, qty) => {

@@ -559,3 +559,123 @@
     text-align: left;
   }
 }
+
+@media (max-width: 540px) {
+  .cart-page {
+    padding: 12px;
+  }
+
+  .cart-items-list {
+    display: contents;
+  }
+
+  .cart-items-rail {
+    display: flex;
+    overflow-x: auto;
+    gap: 0;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .cart-items-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cart-header,
+  .cart-empty-card,
+  .cart-items-panel,
+  .cart-coupon-card,
+  .cart-bill-card,
+  .cart-note-card {
+    border-radius: 20px;
+  }
+
+  .cart-header,
+  .cart-empty-card {
+    padding: 18px 16px;
+  }
+
+  .cart-items-panel,
+  .cart-coupon-card,
+  .cart-bill-card,
+  .cart-note-card {
+    padding: 16px;
+  }
+
+  .cart-header h1,
+  .cart-empty-card h1 {
+    font-size: 1.7rem;
+    line-height: 1.08;
+  }
+
+  .cart-header p,
+  .cart-empty-card p {
+    font-size: 0.92rem;
+    margin-top: 10px;
+  }
+
+  .cart-item-card {
+    flex: 0 0 100%;
+    padding: 14px;
+    gap: 14px;
+    border-radius: 18px;
+    scroll-snap-align: start;
+  }
+
+  .cart-item-media img {
+    max-height: 220px;
+  }
+
+  .cart-item-topline h3 {
+    font-size: 1.15rem;
+    line-height: 1.2;
+  }
+
+  .cart-item-category,
+  .cart-item-meta-box span,
+  .cart-bill-row span,
+  .cart-note-card p {
+    font-size: 0.84rem;
+  }
+
+  .cart-page .qty-selector,
+  .cart-coupon-input,
+  .cart-checkout-btn,
+  .cart-home-link {
+    min-height: 48px !important;
+  }
+
+  .cart-page .cart-action-btn,
+  .cart-page .cart-action-btn.ghost {
+    width: 100%;
+  }
+
+  .cart-value-chip,
+  .cart-meta,
+  .cart-line-total {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cart-mobile-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.9rem;
+  }
+
+  .cart-mobile-dot {
+    width: 9px;
+    height: 9px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(184, 147, 102, 0.28);
+    padding: 0;
+  }
+
+  .cart-mobile-dot.active {
+    width: 24px;
+    background: #8a6716;
+  }
+}

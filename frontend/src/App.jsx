@@ -29,6 +29,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CartProvider } from "./context/CartProvider";
 import { WishlistProvider } from "./context/WishlistContext";
+import { AuthPromptProvider } from "./context/AuthPromptContext";
 import LoaderProvider from "./context/LoaderProvider";
 import { useLoader } from "./context/useLoader";
 
@@ -58,13 +59,15 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <AdminAuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <LoaderProvider>
-                <AppContent />
-              </LoaderProvider>
-            </WishlistProvider>
-          </CartProvider>
+          <AuthPromptProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <LoaderProvider>
+                  <AppContent />
+                </LoaderProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthPromptProvider>
         </AdminAuthProvider>
       </AuthProvider>
     </BrowserRouter>

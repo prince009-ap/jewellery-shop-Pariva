@@ -12,13 +12,14 @@ function WishlistModal({ product, onClose }) {
   };
 
   const handleAddToWishlist = (wishlistId) => {
-    addToWishlist(wishlistId, product._id);
+    void addToWishlist(wishlistId, product._id);
     onClose();
   };
 
   const handleCreateAndAdd = async () => {
     if (title.trim()) {
-      await createWishlist(title);
+      const result = await createWishlist(title);
+      if (result?.ok === false) return;
       setTitle("");
       onClose();
     }

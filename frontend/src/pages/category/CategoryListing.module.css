@@ -709,4 +709,142 @@
     overflow: visible;
     padding-right: 0;
   }
+
+  .breadcrumb {
+    padding: 10px 2px 12px;
+    flex-wrap: wrap;
+  }
+
+  .categoryHero {
+    margin-bottom: 14px;
+  }
+
+  .categoryHeroCopy,
+  .metaCard,
+  .horizontalFilters {
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+  }
+
+  .categoryHeroCopy {
+    padding: 18px 16px;
+  }
+
+  .categoryTitle {
+    font-size: 2.2rem;
+    line-height: 0.98;
+    font-family: "Playfair Display", system-ui, sans-serif;
+  }
+
+  .categoryDescription {
+    font-size: 0.9rem;
+  }
+
+  .horizontalFilters {
+    padding: 14px;
+  }
+
+  .filtersHeader {
+    margin-bottom: 12px;
+  }
+
+  .horizontalFiltersGrid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(220px, 78%);
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .horizontalFiltersGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filterBlock {
+    min-height: 100%;
+    border: 1px solid #ece5da;
+    border-radius: 999px;
+    padding: 12px 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fdf8ef 100%);
+    align-content: start;
+  }
+
+  .filterLabel {
+    font-size: 0.8rem;
+  }
+
+  .filterLabel span {
+    font-size: 0.76rem;
+  }
+
+  .productsTopBar {
+    align-items: start;
+    gap: 10px;
+  }
+
+  .productsTopBar h2 {
+    font-size: 0.98rem;
+  }
+
+  .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .productCard {
+    border-radius: 18px;
+  }
+
+  .imageContainer {
+    aspect-ratio: 1 / 1.08;
+  }
+
+  .productInfo {
+    padding: 10px;
+  }
+
+  .productName {
+    font-size: 0.9rem;
+    line-height: 1.3;
+  }
+
+  .cardActions {
+    grid-template-columns: 1fr;
+  }
+
+  .actionButton {
+    min-height: 36px;
+    letter-spacing: 0.08em;
+  }
+}
+
+@media (max-width: 540px) {
+  .container {
+    padding: 0 10px 20px;
+  }
+
+  .categoryTitle {
+    font-size: 1.8rem;
+  }
+
+  .horizontalFiltersGrid {
+    grid-auto-columns: 88%;
+  }
+
+  .productGrid {
+    gap: 10px;
+  }
+
+  .productName {
+    font-size: 0.86rem;
+  }
+
+  .productMeta,
+  .ratingText,
+  .stockStatus {
+    font-size: 0.72rem;
+  }
 }

@@ -1,21 +1,29 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useCart from "../context/useCart";
 import QuantitySelector from "../components/common/QuantitySelector";
 import API from "../services/api";
 import "./Cart.css";
+import { getUserToken } from "../utils/authStorage";
+import { useAuthPrompt } from "../context/AuthPromptContext";
 
 const APPLIED_COUPON_STORAGE_KEY = "appliedCartCoupon";
 
 function Cart() {
   const navigate = useNavigate();
   const { cart, updateQty, removeFromCart, totalItems, loading } = useCart();
+  const { showAuthPrompt } = useAuthPrompt();
   const safeCart = cart.filter((item) => item.product);
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMessage, setCouponMessage] = useState("");
   const [couponMessageType, setCouponMessageType] = useState("");
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= 540 : false
+  );
+  const [activeSlide, setActiveSlide] = useState(0);
+  const railRef = useRef(null);
 
   const formatPrice = (value) => `Rs ${Number(value || 0).toLocaleString("en-IN")}`;
 
@@ -65,6 +73,12 @@ function Cart() {
       })
     );
   }, [coupon, discount]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth <= 540);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const applyCoupon = async () => {
     if (couponLoading || !coupon.trim()) return;
@@ -165,6 +179,14 @@ function Cart() {
               <span>{safeCart.length} design(s)</span>
             </div>
 
+            <div
+              className={isMobileView ? "cart-items-rail" : "cart-items-list"}
+              ref={railRef}
+              onScroll={() => {
+                if (!isMobileView || !railRef.current) return;
+                setActiveSlide(Math.round(railRef.current.scrollLeft / railRef.current.clientWidth));
+              }}
+            >
             {safeCart.map((item) => (
               <article className="cart-item-card" key={item.product._id}>
                 <div className="cart-item-media">
@@ -224,6 +246,27 @@ function Cart() {
                 </div>
               </article>
             ))}
+            </div>
+
+            {isMobileView && safeCart.length > 1 ? (
+              <div className="cart-mobile-dots" aria-label="Cart items">
+                {safeCart.map((_, index) => (
+                  <button
+                    key={`cart-dot-${index}`}
+                    type="button"
+                    className={`cart-mobile-dot ${activeSlide === index ? "active" : ""}`}
+                    onClick={() => {
+                      if (!railRef.current) return;
+                      railRef.current.scrollTo({
+                        left: railRef.current.clientWidth * index,
+                        behavior: "smooth",
+                      });
+                    }}
+                    aria-label={`Go to cart item ${index + 1}`}
+                  />
+                ))}
+              </div>
+            ) : null}
           </section>
 
           <aside className="cart-summary-panel">
@@ -298,7 +341,12 @@ function Cart() {
               <button
                 type="button"
                 className="cart-action-btn cart-checkout-btn"
-                onClick={() =>
+                onClick={() => {
+                  if (!getUserToken()) {
+                    showAuthPrompt("Please sign in to continue with checkout.");
+                    return;
+                  }
+
                   navigate("/checkout", {
                     state: {
                       from: "/cart",
@@ -309,8 +357,8 @@ function Cart() {
                           }
                         : null,
                     },
-                  })
-                }
+                  });
+                }}
               >
                 Proceed to Checkout
               </button>

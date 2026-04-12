@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
@@ -16,6 +16,16 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [analytics, setAnalytics] = useState([]);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === "undefined" ? 1440 : window.innerWidth
+  );
+  const [activeStatIndex, setActiveStatIndex] = useState(0);
+  const [activeRecentIndex, setActiveRecentIndex] = useState(0);
+  const statsRailRef = useRef(null);
+  const recentRailRef = useRef(null);
+
+  const isTabletOrLess = viewportWidth < 1024;
+  const isCompact = viewportWidth < 768;
 
   useEffect(() => {
     adminAPI
@@ -35,6 +45,15 @@ function AdminDashboard() {
       .catch((err) => console.error("Dashboard error", err));
   }, []);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   if (!stats) {
     return (
       <div className="page-loading-overlay">
@@ -48,6 +67,38 @@ function AdminDashboard() {
 
   const getAgeInDays = (dateValue) =>
     Math.max(0, Math.floor((Date.now() - new Date(dateValue).getTime()) / (1000 * 60 * 60 * 24)));
+
+  const updateActiveSlide = (container, setter) => {
+    if (!container) return;
+
+    const children = Array.from(container.children);
+    if (!children.length) return;
+
+    const containerLeft = container.getBoundingClientRect().left;
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    children.forEach((child, index) => {
+      const distance = Math.abs(child.getBoundingClientRect().left - containerLeft);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    setter(closestIndex);
+  };
+
+  const formatAnalyticsTick = (value) => {
+    if (!isTabletOrLess) return value;
+
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return String(value).slice(-5);
+    }
+
+    return `${parsedDate.getDate()}/${parsedDate.getMonth() + 1}`;
+  };
 
   const statItems = [
     { title: "Total Products", value: stats.totalProducts, onClick: () => navigate("/admin/products") },
@@ -79,6 +130,7 @@ function AdminDashboard() {
       onClick: () => navigate("/admin/orders"),
     },
   ];
+  const recentProducts = stats.recentProducts || [];
 
   return (
     <div className="admin-dashboard-page">
@@ -93,18 +145,33 @@ function AdminDashboard() {
           </div>
         </header>
 
-        <section className="dashboard-grid">
+        <section
+          ref={statsRailRef}
+          className={`dashboard-grid ${isTabletOrLess ? "dashboard-grid-mobile" : ""}`}
+          onScroll={() => updateActiveSlide(statsRailRef.current, setActiveStatIndex)}
+        >
           {statItems.map((item) => (
             <StatCard key={item.title} title={item.title} value={item.value} onClick={item.onClick} />
           ))}
         </section>
+
+        {isTabletOrLess ? (
+          <div className="dashboard-mobile-dots" aria-label="Dashboard card position">
+            {statItems.map((item, index) => (
+              <span
+                key={item.title}
+                className={`dashboard-mobile-dot ${index === activeStatIndex ? "active" : ""}`}
+              />
+            ))}
+          </div>
+        ) : null}
 
         <section className="admin-panel-card">
           <div className="panel-head">
             <h3>Recent Products</h3>
           </div>
 
-          <div className="table-wrap">
+          <div className="table-wrap recent-products-desktop">
             <table className="recent-products-table">
               <thead>
                 <tr>
@@ -117,15 +184,61 @@ function AdminDashboard() {
               <tbody>
                 {(stats.recentProducts || []).map((p) => (
                   <tr key={p._id}>
-                    <td>{p.name}</td>
-                    <td>{p.category}</td>
-                    <td>Rs {p.price}</td>
-                    <td>{p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "N/A"}</td>
+                    <td data-label="Name">{p.name}</td>
+                    <td data-label="Category">{p.category}</td>
+                    <td data-label="Price">Rs {p.price}</td>
+                    <td data-label="Added On">
+                      {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "N/A"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {isTabletOrLess ? (
+            <>
+              <div
+                ref={recentRailRef}
+                className="recent-products-mobile-rail"
+                onScroll={() => updateActiveSlide(recentRailRef.current, setActiveRecentIndex)}
+              >
+                {recentProducts.map((product) => (
+                  <article key={product._id} className="recent-product-mobile-card">
+                    <div className="recent-product-mobile-field">
+                      <span>Name</span>
+                      <strong>{product.name}</strong>
+                    </div>
+                    <div className="recent-product-mobile-field">
+                      <span>Category</span>
+                      <strong>{product.category}</strong>
+                    </div>
+                    <div className="recent-product-mobile-field">
+                      <span>Price</span>
+                      <strong>Rs {product.price}</strong>
+                    </div>
+                    <div className="recent-product-mobile-field">
+                      <span>Added On</span>
+                      <strong>
+                        {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "N/A"}
+                      </strong>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              {recentProducts.length > 1 ? (
+                <div className="dashboard-mobile-dots" aria-label="Recent product position">
+                  {recentProducts.map((product, index) => (
+                    <span
+                      key={product._id}
+                      className={`dashboard-mobile-dot ${index === activeRecentIndex ? "active" : ""}`}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </section>
 
         {stats.lowStockProducts.length > 0 && (
@@ -223,16 +336,41 @@ function AdminDashboard() {
             </div>
           ) : (
             <div className="chart-area">
-              <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={analytics}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={analytics}
+                  margin={{
+                    top: 10,
+                    right: isCompact ? 8 : 16,
+                    left: isCompact ? 0 : 4,
+                    bottom: isCompact ? 12 : 8,
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#d6deeb" />
-                  <XAxis dataKey="date" stroke="#62738f" />
-                  <YAxis stroke="#62738f" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#62738f"
+                    tick={{ fontSize: isCompact ? 11 : 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    minTickGap={isCompact ? 24 : 18}
+                    interval="preserveStartEnd"
+                    tickFormatter={formatAnalyticsTick}
+                  />
+                  <YAxis
+                    stroke="#62738f"
+                    width={isCompact ? 28 : 36}
+                    tick={{ fontSize: isCompact ? 11 : 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <Tooltip
                     contentStyle={{
                       borderRadius: "12px",
                       border: "1px solid #d6deeb",
                     }}
+                    labelFormatter={(value) => `Date: ${value}`}
                   />
                   <Line type="monotone" dataKey="users" stroke="#0ea5a0" strokeWidth={3} />
                   <Line

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import API from "../../services/api";
 import useCart from "../../context/useCart";
+import { getUserToken } from "../../utils/authStorage";
+import { useAuthPrompt } from "../../context/AuthPromptContext";
 
 const APPLIED_COUPON_STORAGE_KEY = "appliedCartCoupon";
 
@@ -9,6 +11,8 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { cart } = useCart();
+  const { showAuthPrompt } = useAuthPrompt();
+  const isLoggedIn = Boolean(getUserToken());
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -85,6 +89,13 @@ export default function Checkout() {
   }, [cart, directProductId, directQuantity, stateItems]);
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      setAddresses([]);
+      setMessage("Please sign in to select an address and continue with checkout.");
+      setMessageType("error");
+      return;
+    }
+
     API.get("/address")
       .then((res) => {
         setAddresses(res.data);
@@ -97,7 +108,7 @@ export default function Checkout() {
         setMessage("Unable to load saved addresses right now. Please try again.");
         setMessageType("error");
       });
-  }, []);
+  }, [isLoggedIn]);
 
   const priceBreakup = useMemo(() => {
     const gold = checkoutItems.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -127,6 +138,13 @@ export default function Checkout() {
   const formatPrice = (value) => `Rs ${Number(value || 0).toLocaleString("en-IN")}`;
 
   const proceedToPayment = () => {
+    if (!isLoggedIn) {
+      setMessage("Please sign in to continue to payment.");
+      setMessageType("error");
+      showAuthPrompt("Please sign in to continue to payment.");
+      return;
+    }
+
     if (!selectedAddress) {
       setMessage("Please select a delivery address before continuing.");
       setMessageType("error");
@@ -229,7 +247,16 @@ export default function Checkout() {
             <button
               type="button"
               className="checkout-outline-btn"
-              onClick={() => navigate("/account/addresses")}
+              onClick={() => {
+                if (!isLoggedIn) {
+                  setMessage("Please sign in to manage your saved addresses.");
+                  setMessageType("error");
+                  showAuthPrompt("Please sign in to manage your saved addresses.");
+                  return;
+                }
+
+                navigate("/account/addresses");
+              }}
             >
               Add New Address
             </button>

@@ -3,10 +3,13 @@ import useCart from "../../context/useCart";
 import QuantitySelector from "./QuantitySelector";
 import WishlistHeart from "../wishlist/WishlistHeart";
 import StarRating from "../StarRating";
+import { getUserToken } from "../../utils/authStorage";
+import { useAuthPrompt } from "../../context/AuthPromptContext";
 
 function ProductCard({ product }) {
   const { cart, addToCart, updateQty } = useCart();
   const navigate = useNavigate();
+  const { showAuthPrompt } = useAuthPrompt();
 
   if (!product?._id) return null;
 
@@ -16,6 +19,11 @@ function ProductCard({ product }) {
   const totalReviews = Number(product.totalReviews || 0);
 
   const handleBuyNow = () => {
+    if (!getUserToken()) {
+      showAuthPrompt("Please sign in to continue to checkout.");
+      return;
+    }
+
     navigate("/checkout", {
       state: {
         source: "direct",
@@ -62,7 +70,7 @@ function ProductCard({ product }) {
               <button className="pill-button pill-small" onClick={handleBuyNow}>
                 Buy Now
               </button>
-              <button className="pill-button pill-small" onClick={() => addToCart(product._id, 1)}>
+              <button className="pill-button pill-small" onClick={() => void addToCart(product._id, 1)}>
                 Add to Cart
               </button>
             </div>

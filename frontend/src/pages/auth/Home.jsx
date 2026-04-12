@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { MdFavoriteBorder, MdOutlineShoppingBag, MdPersonOutline } from "react-icons/md";
 import FilterBar from "../../components/common/FilterBar";
 import ProductCard from "../../components/common/ProductCard";
 import API from "../../services/api";
@@ -9,8 +10,72 @@ import { clearUserSession, getStoredUser } from "../../utils/authStorage";
 import Footer from "../../components/layout/Footer.jsx";
 import MidBannerSlider from "../../components/home/MidBannerSlider";
 import "../../styles/footer.css";
+import { useAuthPrompt } from "../../context/AuthPromptContext";
 
 import.meta.glob("../../assets/images/*.png", { eager: true, import: "default" });
+
+const chunkItems = (items, size) => {
+  if (!Array.isArray(items) || size <= 0) return [];
+  const chunks = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+};
+
+function MobilePagedRail({ items, itemsPerPage, className, renderPage, dotsLabel }) {
+  const railRef = useRef(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const pages = useMemo(() => chunkItems(items, itemsPerPage), [items, itemsPerPage]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+    if (railRef.current) {
+      railRef.current.scrollLeft = 0;
+    }
+  }, [pages.length]);
+
+  const handleScroll = () => {
+    if (!railRef.current) return;
+    const { scrollLeft, clientWidth } = railRef.current;
+    if (!clientWidth) return;
+    setActiveIndex(Math.round(scrollLeft / clientWidth));
+  };
+
+  if (pages.length === 0) return null;
+
+  return (
+    <>
+      <div className={className} ref={railRef} onScroll={handleScroll}>
+        {pages.map((pageItems, index) => (
+          <div key={`${dotsLabel}-${index}`} className="mobile-rail-page">
+            {renderPage(pageItems, index)}
+          </div>
+        ))}
+      </div>
+
+      {pages.length > 1 ? (
+        <div className="mobile-rail-dots" aria-label={dotsLabel}>
+          {pages.map((_, index) => (
+            <button
+              key={`${dotsLabel}-dot-${index}`}
+              type="button"
+              className={`mobile-rail-dot ${index === activeIndex ? "active" : ""}`}
+              aria-label={`Go to ${dotsLabel} page ${index + 1}`}
+              onClick={() => {
+                if (!railRef.current) return;
+                railRef.current.scrollTo({
+                  left: railRef.current.clientWidth * index,
+                  behavior: "smooth",
+                });
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+}
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -23,19 +88,34 @@ function Home() {
   const [sort, setSort] = useState("relevance");
   const [showAccount, setShowAccount] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === "undefined" ? 1440 : window.innerWidth
+  );
   const accountRef = useRef(null);
   const searchRef = useRef(null);
 
   const { user, logout } = useAuth();
+  const { showAuthPrompt } = useAuthPrompt();
   const storedUser = useMemo(() => getStoredUser(), [user]);
   const displayName = user?.name || storedUser?.name || "Guest User";
   const displayEmail = user?.email || storedUser?.email || "";
+  const firstName = (displayName || "Guest User").split(" ")[0];
+  const isLoggedIn = Boolean(user || storedUser);
   const navigate = useNavigate();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const categoryFromURL = params.get("category");
   const searchFromURL = (params.get("search") || "").trim();
   const { totalItems } = useCart();
+  const isMobileHeader = viewportWidth < 768;
+  const isMobileView = viewportWidth < 768;
+  const mobileProductPageSize = viewportWidth < 420 ? 1 : 2;
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (location.hash) {
@@ -226,6 +306,22 @@ function Home() {
     []
   );
 
+  const promptSignIn = (message) => {
+    setShowAccount(false);
+    showAuthPrompt(message);
+  };
+
+  const handleProtectedNavigation = (path, message) => {
+    setShowAccount(false);
+
+    if (!isLoggedIn) {
+      promptSignIn(message);
+      return;
+    }
+
+    navigate(path);
+  };
+
   return (
     <div className="home-page">
       <div className="top-bar">
@@ -255,16 +351,32 @@ function Home() {
           </nav>
 
           <div className="header-actions">
-            <button className="pill-button" onClick={() => navigate("/wishlist")}>
-              Wishlist
+            <button
+              className="pill-button"
+              onClick={() =>
+                handleProtectedNavigation("/wishlist", "Please sign in to view and manage your wishlist.")
+              }
+              aria-label="Wishlist"
+            >
+              {isMobileHeader ? <MdFavoriteBorder size={23} /> : "Wishlist"}
             </button>
 
             <div ref={accountRef} style={{ position: "relative" }}>
-              <button className="pill-button" onClick={() => setShowAccount((prev) => !prev)}>
-                Account
-              </button>
+              {isLoggedIn ? (
+                <button className="pill-button" onClick={() => setShowAccount((prev) => !prev)} aria-label="Account">
+                  {isMobileHeader ? firstName.slice(0, 1).toUpperCase() : firstName}
+                </button>
+              ) : (
+                <button
+                  className="pill-button"
+                  onClick={() => navigate("/login", { state: { from: location.pathname } })}
+                  aria-label="Sign In"
+                >
+                  {isMobileHeader ? <MdPersonOutline size={23} /> : "Sign In"}
+                </button>
+              )}
 
-              {showAccount ? (
+              {isLoggedIn && showAccount ? (
                 <div className="account-dropdown">
                   <p>
                     <strong>{displayName}</strong>
@@ -275,8 +387,7 @@ function Home() {
 
                   <button
                     onClick={() => {
-                      setShowAccount(false);
-                      navigate("/account/orders");
+                      handleProtectedNavigation("/account/orders", "Please sign in to view your orders.");
                     }}
                   >
                     Orders
@@ -284,8 +395,7 @@ function Home() {
 
                   <button
                     onClick={() => {
-                      setShowAccount(false);
-                      navigate("/account/profile");
+                      handleProtectedNavigation("/account/profile", "Please sign in to manage your profile.");
                     }}
                   >
                     Profile
@@ -293,8 +403,7 @@ function Home() {
 
                   <button
                     onClick={() => {
-                      setShowAccount(false);
-                      navigate("/account/addresses");
+                      handleProtectedNavigation("/account/addresses", "Please sign in to manage your saved addresses.");
                     }}
                   >
                     Addresses
@@ -305,10 +414,10 @@ function Home() {
                   <button
                     className="account-logout-btn"
                     onClick={() => {
+                      setShowAccount(false);
                       logout();
                       clearUserSession();
-                      navigate("/login");
-                      window.location.reload();
+                      navigate("/home", { replace: true });
                     }}
                   >
                     Logout
@@ -317,8 +426,8 @@ function Home() {
               ) : null}
             </div>
 
-            <button className="pill-button pill-accent cart-btn" onClick={() => navigate("/cart")}>
-              Cart
+            <button className="pill-button pill-accent cart-btn" onClick={() => navigate("/cart")} aria-label="Cart">
+              {isMobileHeader ? <MdOutlineShoppingBag size={23} /> : "Cart"}
               {totalItems > 0 ? <span className="cart-badge">{totalItems}</span> : null}
             </button>
           </div>
@@ -386,22 +495,49 @@ function Home() {
           <h2>Shop by Category</h2>
           <p>Explore finely crafted pieces, curated for every mood and moment.</p>
         </div>
-        <div className="category-grid">
-          {categories.map((cat) => (
-            <article
-              key={cat.name}
-              className="category-card"
-              onClick={() => navigate(`/category/${cat.name.toLowerCase()}`)}
-              style={{ cursor: "pointer" }}
-            >
-              <div className="category-image">
-                <img src={`http://localhost:5000/uploads/${cat.image}`} alt={cat.name} />
+        {isMobileView ? (
+          <MobilePagedRail
+            items={categories}
+            itemsPerPage={4}
+            className="mobile-rail mobile-category-rail"
+            dotsLabel="category"
+            renderPage={(pageItems) => (
+              <div className="mobile-category-grid">
+                {pageItems.map((cat) => (
+                  <article
+                    key={cat.name}
+                    className="category-card category-card-mobile"
+                    onClick={() => navigate(`/category/${cat.name.toLowerCase()}`)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div className="category-image">
+                      <img src={`http://localhost:5000/uploads/${cat.image}`} alt={cat.name} />
+                    </div>
+                    <h3>{cat.name}</h3>
+                    <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>
+                  </article>
+                ))}
               </div>
-              <h3>{cat.name}</h3>
-              <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>
-            </article>
-          ))}
-        </div>
+            )}
+          />
+        ) : (
+          <div className="category-grid">
+            {categories.map((cat) => (
+              <article
+                key={cat.name}
+                className="category-card"
+                onClick={() => navigate(`/category/${cat.name.toLowerCase()}`)}
+                style={{ cursor: "pointer" }}
+              >
+                <div className="category-image">
+                  <img src={`http://localhost:5000/uploads/${cat.image}`} alt={cat.name} />
+                </div>
+                <h3>{cat.name}</h3>
+                <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="section products" id="featured">
@@ -409,11 +545,27 @@ function Home() {
           <h2>Featured</h2>
           <p>Timeless designs our community returns to, season after season.</p>
         </div>
-        <div className="product-grid">
-          {featured.map((p) => (
-            <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
-          ))}
-        </div>
+        {isMobileView ? (
+          <MobilePagedRail
+            items={featured}
+            itemsPerPage={mobileProductPageSize}
+            className="mobile-rail mobile-product-rail"
+            dotsLabel="featured products"
+            renderPage={(pageItems) => (
+              <div className={`mobile-product-page mobile-product-page-${mobileProductPageSize}`}>
+                {pageItems.map((p) => (
+                  <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+                ))}
+              </div>
+            )}
+          />
+        ) : (
+          <div className="product-grid">
+            {featured.map((p) => (
+              <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="section products">
@@ -421,11 +573,27 @@ function Home() {
           <h2>Trending Now</h2>
           <p>Pieces that are being added to carts across the country right now.</p>
         </div>
-        <div className="product-grid">
-          {trending.map((p) => (
-            <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
-          ))}
-        </div>
+        {isMobileView ? (
+          <MobilePagedRail
+            items={trending}
+            itemsPerPage={mobileProductPageSize}
+            className="mobile-rail mobile-product-rail"
+            dotsLabel="trending products"
+            renderPage={(pageItems) => (
+              <div className={`mobile-product-page mobile-product-page-${mobileProductPageSize}`}>
+                {pageItems.map((p) => (
+                  <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+                ))}
+              </div>
+            )}
+          />
+        ) : (
+          <div className="product-grid">
+            {trending.map((p) => (
+              <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="section products">
@@ -433,11 +601,27 @@ function Home() {
           <h2>Recommended For You</h2>
           <p>A curation inspired by minimal daily wear and modern heirlooms.</p>
         </div>
-        <div className="product-grid">
-          {recommended.map((p) => (
-            <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
-          ))}
-        </div>
+        {isMobileView ? (
+          <MobilePagedRail
+            items={recommended}
+            itemsPerPage={mobileProductPageSize}
+            className="mobile-rail mobile-product-rail"
+            dotsLabel="recommended products"
+            renderPage={(pageItems) => (
+              <div className={`mobile-product-page mobile-product-page-${mobileProductPageSize}`}>
+                {pageItems.map((p) => (
+                  <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+                ))}
+              </div>
+            )}
+          />
+        ) : (
+          <div className="product-grid">
+            {recommended.map((p) => (
+              <ProductCard key={p._id} product={p} onAddToCart={() => {}} />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="section how-it-works">
@@ -454,22 +638,44 @@ function Home() {
               complete their purchase with a smooth checkout and tracking flow.
             </p>
           </div>
-          <div className="steps-grid">
-            {howItWorksSteps.map((step) => (
-              <article className="step-card" key={step.number}>
-                <div className="step-number">{step.number}</div>
-                <span className="step-kicker">{step.kicker}</span>
-                <h3>{step.title}</h3>
-                <p>{step.description}</p>
-                <span className="step-note">{step.note}</span>
-              </article>
-            ))}
-          </div>
+          {isMobileView ? (
+            <MobilePagedRail
+              items={howItWorksSteps}
+              itemsPerPage={1}
+              className="mobile-rail mobile-steps-rail"
+              dotsLabel="journey steps"
+              renderPage={(pageItems) => (
+                <div className="mobile-steps-page">
+                  {pageItems.map((step) => (
+                    <article className="step-card" key={step.number}>
+                      <div className="step-number">{step.number}</div>
+                      <span className="step-kicker">{step.kicker}</span>
+                      <h3>{step.title}</h3>
+                      <p>{step.description}</p>
+                      <span className="step-note">{step.note}</span>
+                    </article>
+                  ))}
+                </div>
+              )}
+            />
+          ) : (
+            <div className="steps-grid">
+              {howItWorksSteps.map((step) => (
+                <article className="step-card" key={step.number}>
+                  <div className="step-number">{step.number}</div>
+                  <span className="step-kicker">{step.kicker}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.description}</p>
+                  <span className="step-note">{step.note}</span>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       <section className="section custom-cta" id="custom">
-        <div className="custom-cta-inner">
+        <div className={`custom-cta-inner ${isMobileView ? "custom-cta-inner-mobile" : ""}`}>
           <div className="custom-cta-text">
             <h2>Design with PARIVA Studio</h2>
             <p>
@@ -478,11 +684,19 @@ function Home() {
             </p>
           </div>
 
-          <div className="custom-cta-actions">
+          <div className={`custom-cta-actions ${isMobileView ? "custom-cta-actions-mobile" : ""}`}>
             <Link to="/custom-design" className="hero-cta primary-cta">
               Open Custom Studio
             </Link>
-            <Link to="/my-custom-designs" className="hero-cta ghost-cta">
+            <Link
+              to="/my-custom-designs"
+              className="hero-cta ghost-cta"
+              onClick={(event) => {
+                if (isLoggedIn) return;
+                event.preventDefault();
+                promptSignIn("Please sign in to view your custom design requests.");
+              }}
+            >
               My Custom Requests
             </Link>
           </div>

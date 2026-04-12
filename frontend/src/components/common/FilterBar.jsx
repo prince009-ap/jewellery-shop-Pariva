@@ -1,5 +1,6 @@
 // src/components/common/FilterBar.js
 import React from "react";
+import { MdSearch, MdTune, MdDiamond, MdAutoAwesome } from "react-icons/md";
 import SelectDropdown from "./SelectDropdown";
 
 const PRICE_RANGES = [
@@ -51,9 +52,12 @@ function FilterBar({
     <section className="search-filter" id="search" aria-label="Search and Filters">
       <div className="search-filter-inner">
  <div className="search-group" ref={searchRef}>
+  <span className="search-group-icon" aria-hidden="true">
+    <MdSearch size={22} />
+  </span>
   <input
     type="search"
-    placeholder="Search for rings, necklaces, collections or gifts"
+    placeholder="Search for diamond jewellery"
     value={search}
     onChange={(e) => onSearchChange(e.target.value)}
     onFocus={() => search && onSearchChange(search)}
@@ -82,6 +86,9 @@ function FilterBar({
 
         <div className="filters-group">
           <FilterPill label="Price">
+            <span className="filter-pill-icon" aria-hidden="true">
+              <MdTune size={16} />
+            </span>
             <SelectDropdown
               value={priceRange}
               onChange={(e) => onPriceChange(e.target.value)}
@@ -90,6 +97,9 @@ function FilterBar({
             />
           </FilterPill>
           <FilterPill label="Metal">
+            <span className="filter-pill-icon" aria-hidden="true">
+              <MdDiamond size={16} />
+            </span>
             <SelectDropdown
               value={metal}
               onChange={(e) => onMetalChange(e.target.value)}
@@ -98,6 +108,9 @@ function FilterBar({
             />
           </FilterPill>
           <FilterPill label="Occasion">
+            <span className="filter-pill-icon" aria-hidden="true">
+              <MdAutoAwesome size={16} />
+            </span>
             <SelectDropdown
               value={occasion}
               onChange={(e) => onOccasionChange(e.target.value)}
@@ -106,6 +119,9 @@ function FilterBar({
             />
           </FilterPill>
           <FilterPill label="Sort">
+            <span className="filter-pill-icon" aria-hidden="true">
+              <MdTune size={16} />
+            </span>
             <SelectDropdown
               value={sort}
               onChange={(e) => onSortChange(e.target.value)}

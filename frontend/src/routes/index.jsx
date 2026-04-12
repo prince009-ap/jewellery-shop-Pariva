@@ -63,23 +63,18 @@ export default function AppRoutes() {
       ? <Navigate to="/home" replace />
       : <UserLogin />;
 
+  const rootLanding = adminToken
+    ? <Navigate to="/admin/dashboard" replace />
+    : <Navigate to="/home" replace />;
+
   return (
     <Routes>
       {/* ================= USER (PUBLIC) ================= */}
-      <Route path="/" element={loginLanding} />
+      <Route path="/" element={rootLanding} />
       <Route path="/login" element={loginLanding} />
       <Route path="/register" element={<UserRegister />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-      <Route
-        path="/product/:id"
-        element={
-          <UserRoute>
-            <ProductDetail />
-          </UserRoute>
-        }
-      />
 
       <Route path="/cart" element={<Cart />} />
 

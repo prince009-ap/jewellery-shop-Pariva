@@ -52,43 +52,69 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useEffect, useState } from "react";
 import API from "../services/api";
+import { getUserToken } from "../utils/authStorage";
+import { useAuthPrompt } from "./AuthPromptContext";
 
 export const WishlistContext = createContext();
 
 export const WishlistProvider = ({ children }) => {
   const [wishlists, setWishlists] = useState([]);
+  const { showAuthPrompt } = useAuthPrompt();
 
   const fetchWishlists = async () => {
+    if (!getUserToken()) {
+      setWishlists([]);
+      return;
+    }
+
     const res = await API.get("/wishlist",{ skipLoader: true });
     setWishlists(res.data);
   };
 
   const createWishlist = async (title) => {
     if (!title.trim()) return;
+    if (!getUserToken()) {
+      showAuthPrompt("Please sign in to create and save a wishlist.");
+      return { ok: false, requiresAuth: true };
+    }
     await API.post("/wishlist", { title });
-    fetchWishlists();
+    await fetchWishlists();
+    return { ok: true };
   };
 
   const addToWishlist = async (wishlistId, productId) => {
+    if (!getUserToken()) {
+      showAuthPrompt("Please sign in to save items to your wishlist.");
+      return { ok: false, requiresAuth: true };
+    }
     await API.post("/wishlist/add", { wishlistId, productId });
-    fetchWishlists();
+    await fetchWishlists();
+    return { ok: true };
   };
 
   const removeFromWishlist = async (wishlistId, productId) => {
+    if (!getUserToken()) {
+      showAuthPrompt("Please sign in to manage your wishlist.");
+      return { ok: false, requiresAuth: true };
+    }
     await API.post("/wishlist/remove", { wishlistId, productId });
-    fetchWishlists();
+    await fetchWishlists();
+    return { ok: true };
   };
 
   const deleteWishlist = async (wishlistId) => {
+    if (!getUserToken()) {
+      showAuthPrompt("Please sign in to manage your wishlist.");
+      return { ok: false, requiresAuth: true };
+    }
     await API.delete(`/wishlist/${wishlistId}`);
-    fetchWishlists();
+    await fetchWishlists();
+    return { ok: true };
   };
 
 
   useEffect(() => {
-    (async () => {
-      await fetchWishlists();
-    })();
+    void fetchWishlists();
   }, []);
 
   return (

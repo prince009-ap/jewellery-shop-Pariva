@@ -9,6 +9,7 @@ import ReviewForm from "../../components/ReviewForm";
 import ReviewList from "../../components/ReviewList";
 import styles from "./ProductDetail.module.css";
 import { getUserToken } from "../../utils/authStorage";
+import { useAuthPrompt } from "../../context/AuthPromptContext";
 
 const getProductId = (item) => {
   const rawProduct = item?.productId || item?.product;
@@ -21,6 +22,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { cart, addToCart: addToCartContext, updateQty } = useCart();
+  const { showAuthPrompt } = useAuthPrompt();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +92,10 @@ export default function ProductDetail() {
 
   const buyNow = () => {
     if (!product || product.stock === 0) return;
+    if (!getUserToken()) {
+      showAuthPrompt("Please sign in to continue to checkout.");
+      return;
+    }
 
     navigate("/checkout", {
       state: {
@@ -374,7 +380,7 @@ export default function ProductDetail() {
                 type="button"
                 className={styles.actionSecondaryButton}
                 onClick={() => {
-                  addToCartContext(id, selectedQty);
+                  void addToCartContext(id, selectedQty);
                 }}
                 disabled={product.stock === 0}
               >
