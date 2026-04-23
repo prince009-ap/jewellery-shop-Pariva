@@ -27,10 +27,10 @@ import reviewRoutes from "./routes/reviewRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+
 const app = express();
 const server = http.createServer(app);
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")

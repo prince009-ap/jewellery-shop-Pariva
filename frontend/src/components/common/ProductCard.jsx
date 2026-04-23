@@ -5,7 +5,7 @@ import WishlistHeart from "../wishlist/WishlistHeart";
 import StarRating from "../StarRating";
 import { getUserToken } from "../../utils/authStorage";
 import { useAuthPrompt } from "../../context/AuthPromptContext";
-import { getProductImageSrc } from "../../utils/imageUrl";
+import { getProductImageSrc, handleProductImageError } from "../../utils/imageUrl";
 
 function ProductCard({ product }) {
   const { cart, addToCart, updateQty } = useCart();
@@ -51,9 +51,7 @@ function ProductCard({ product }) {
         <img
           src={getProductImageSrc(product.image)}
           alt={product.name}
-          onError={(e) => {
-            e.currentTarget.src = "/images/placeholder.jpg";
-          }}
+          onError={handleProductImageError}
         />
       </Link>
 

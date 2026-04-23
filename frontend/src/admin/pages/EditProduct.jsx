@@ -1,8 +1,8 @@
-import { API_BASE_URL } from "../../services/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
 import { METAL_TYPES, OCCASION_TYPES, PRODUCT_CATEGORIES } from "../../constants/productOptions";
+import { getProductImageSrc, handleProductImageError } from "../../utils/imageUrl";
 import "./EditProduct.css";
 
 function EditProduct() {
@@ -54,7 +54,7 @@ function EditProduct() {
 
   const previewUrl = useMemo(() => {
     if (form.image) return URL.createObjectURL(form.image);
-    if (currentImage) return `${API_BASE_URL}/uploads/${currentImage}`;
+    if (currentImage) return getProductImageSrc(currentImage);
     return "";
   }, [form.image, currentImage]);
 
@@ -249,7 +249,7 @@ function EditProduct() {
 
                 {previewUrl ? (
                   <div className="preview-wrap">
-                    <img src={previewUrl} alt="Product preview" />
+                    <img src={previewUrl} alt="Product preview" onError={handleProductImageError} />
                   </div>
                 ) : null}
               </div>

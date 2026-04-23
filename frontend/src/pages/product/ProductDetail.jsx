@@ -10,7 +10,7 @@ import ReviewList from "../../components/ReviewList";
 import styles from "./ProductDetail.module.css";
 import { getUserToken } from "../../utils/authStorage";
 import { useAuthPrompt } from "../../context/AuthPromptContext";
-import { getProductImageSrc } from "../../utils/imageUrl";
+import { getProductImageSrc, handleProductImageError } from "../../utils/imageUrl";
 
 const getProductId = (item) => {
   const rawProduct = item?.productId || item?.product;
@@ -200,9 +200,7 @@ export default function ProductDetail() {
               src={getProductImageSrc(galleryImages[selectedImage])}
               alt={product.name}
               className={styles.mainImage}
-              onError={(e) => {
-                e.target.src = "/images/placeholder.jpg";
-              }}
+              onError={handleProductImageError}
             />
           </div>
 
@@ -215,9 +213,7 @@ export default function ProductDetail() {
                   alt={`${product.name} ${index + 1}`}
                   className={`${styles.thumbnail} ${selectedImage === index ? styles.selected : ""}`}
                   onClick={() => setSelectedImage(index)}
-                  onError={(e) => {
-                    e.target.src = "/images/placeholder.jpg";
-                  }}
+                  onError={handleProductImageError}
                 />
               ))}
             </div>

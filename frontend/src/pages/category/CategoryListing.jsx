@@ -7,7 +7,7 @@ import QuantitySelector from "../../components/common/QuantitySelector";
 import WorkingWishlistHeart from "../../components/wishlist/WorkingWishlistHeart";
 import StarRating from "../../components/StarRating";
 import { PRODUCT_CATEGORIES } from "../../constants/productOptions";
-import { getProductImageSrc } from "../../utils/imageUrl";
+import { getProductImageSrc, handleProductImageError } from "../../utils/imageUrl";
 import styles from "./CategoryListing.module.css";
 
 const CATEGORY_DESCRIPTIONS = {
@@ -530,9 +530,7 @@ export default function CategoryListing() {
                     src={getProductImageSrc(product.image)}
                     alt={product.name}
                     className={styles.productImage}
-                    onError={(e) => {
-                      e.target.src = "/images/placeholder.jpg";
-                    }}
+                    onError={handleProductImageError}
                   />
 
                   <div className={styles.badgesContainer}>

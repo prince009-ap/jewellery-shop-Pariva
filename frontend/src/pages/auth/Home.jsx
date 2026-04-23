@@ -3,12 +3,13 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { MdFavoriteBorder, MdOutlineShoppingBag, MdPersonOutline } from "react-icons/md";
 import FilterBar from "../../components/common/FilterBar";
 import ProductCard from "../../components/common/ProductCard";
-import API, { API_BASE_URL } from "../../services/api";
+import API from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import useCart from "../../context/useCart";
 import { clearUserSession, getStoredUser } from "../../utils/authStorage";
 import Footer from "../../components/layout/Footer.jsx";
 import MidBannerSlider from "../../components/home/MidBannerSlider";
+import { getProductImageSrc, handleProductImageError } from "../../utils/imageUrl";
 import "../../styles/footer.css";
 import { useAuthPrompt } from "../../context/AuthPromptContext";
 
@@ -511,7 +512,7 @@ function Home() {
                     style={{ cursor: "pointer" }}
                   >
                     <div className="category-image">
-                      <img src={`${API_BASE_URL}/uploads/${cat.image}`} alt={cat.name} />
+                      <img src={getProductImageSrc(cat.image)} alt={cat.name} onError={handleProductImageError} />
                     </div>
                     <h3>{cat.name}</h3>
                     <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>
@@ -530,7 +531,7 @@ function Home() {
                 style={{ cursor: "pointer" }}
               >
                 <div className="category-image">
-                  <img src={`${API_BASE_URL}/uploads/${cat.image}`} alt={cat.name} />
+                  <img src={getProductImageSrc(cat.image)} alt={cat.name} onError={handleProductImageError} />
                 </div>
                 <h3>{cat.name}</h3>
                 <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>
