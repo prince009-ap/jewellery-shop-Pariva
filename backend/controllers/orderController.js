@@ -8,6 +8,7 @@ import razorpay from "../utils/razorpay.js";
 import Address from "../models/Address.js";
 import mongoose from "mongoose";
 import { fileURLToPath } from "url";
+import { buildClientUrl } from "../utils/appUrl.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -392,6 +393,8 @@ if (!populatedOrder.user || !populatedOrder.shippingAddress) {
 // ✅ GENERATE INVOICE ONLY HERE
 const invoicePath = await generateInvoice(populatedOrder);
 
+    const orderDetailsUrl = buildClientUrl(`/account/orders/${order._id}`);
+
     await sendMail({
       to: req.user.email,
       subject: "Order Invoice - PARIVA Jewellery",
@@ -759,7 +762,7 @@ console.log("Requested Status:", status);
 
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
-              <a href="http://localhost:5173/account/orders/${order._id}" 
+              <a href="${orderDetailsUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); color: #1a1a1a; text-decoration: none; padding: 18px 45px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s ease;">
                 ${status !== "Delivered" ? "Track Your Order" : "View Order Details"}
               </a>
@@ -885,6 +888,8 @@ export const cancelOrderItem = async (req, res) => {
   await order.save();
 
   // 📧 SEND ITEM CANCELLATION EMAIL
+  const updatedOrderDetailsUrl = buildClientUrl(`/account/orders/${order._id}`);
+
   await sendMail({
     to: order.user.email,
     subject: order.items.length === 0 ? "Order Cancelled - PARIVA Jewellery" : "Item Cancelled - PARIVA Jewellery",
@@ -977,7 +982,7 @@ export const cancelOrderItem = async (req, res) => {
 
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
-              <a href="http://localhost:5173/account/orders/${order._id}" 
+              <a href="${updatedOrderDetailsUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); color: #1a1a1a; text-decoration: none; padding: 18px 45px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s ease;">
                 View Order Details
               </a>
@@ -1054,6 +1059,8 @@ export const cancelOrder = async (req, res) => {
   console.log("✅ Order cancelled successfully:", orderId);
 
   // 📧 SEND CANCELLATION EMAIL
+  const shopUrl = buildClientUrl("/shop");
+
   await sendMail({
     to: order.user.email,
     subject: "Order Cancelled - PARIVA Jewellery",
@@ -1181,7 +1188,7 @@ export const cancelOrder = async (req, res) => {
 
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
-              <a href="http://localhost:5173/shop" 
+              <a href="${shopUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); color: #1a1a1a; text-decoration: none; padding: 18px 45px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s ease;">
                 Continue Shopping
               </a>

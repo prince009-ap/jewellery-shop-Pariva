@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { sendMail } from "../utils/sendMail.js";
+import { buildClientUrl } from "../utils/appUrl.js";
 
 export const adminLoginWithOtp = async (req, res) => {
   const { email, password } = req.body;
@@ -147,6 +148,7 @@ export const verifyAdminOtp = async (req, res) => {
     hour: '2-digit',
     minute: '2-digit'
   });
+  const adminDashboardUrl = buildClientUrl("/admin/dashboard");
 
   await sendMail({
     to: admin.email,
@@ -197,7 +199,7 @@ export const verifyAdminOtp = async (req, res) => {
 
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
-              <a href="http://localhost:5173/admin/dashboard" 
+              <a href="${adminDashboardUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #f4e4bc 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 500; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
                 Go to Admin Dashboard
               </a>

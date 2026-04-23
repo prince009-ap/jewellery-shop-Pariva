@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { sendMail } from "../utils/sendMail.js";
+import { buildClientUrl } from "../utils/appUrl.js";
 
 const generateToken = (id, role = "user") => {
   return jwt.sign(
@@ -121,7 +122,7 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
     await user.save();
 
-    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    const resetUrl = buildClientUrl(`/reset-password/${resetToken}`);
 
     await sendMail({
       to: user.email,
@@ -478,6 +479,8 @@ export const verifyLoginOtp = async (req, res) => {
       minute: '2-digit'
     });
 
+    const accountUrl = buildClientUrl("/account");
+
     // Send confirmation email (fire and forget, don't block response)
     sendMail({
       to: user.email,
@@ -536,7 +539,7 @@ export const verifyLoginOtp = async (req, res) => {
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 40px 0;">
-                <a href="http://localhost:5173/account" 
+                <a href="${accountUrl}" 
                    style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%); color: #1a1a1a; text-decoration: none; padding: 18px 45px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s ease;">
                   Go to My Account
                 </a>
