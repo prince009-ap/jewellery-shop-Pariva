@@ -750,26 +750,36 @@
   }
 
   .horizontalFiltersGrid {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(220px, 78%);
+    grid-template-columns: 1fr;
     gap: 12px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-  }
-
-  .horizontalFiltersGrid::-webkit-scrollbar {
-    display: none;
   }
 
   .filterBlock {
     min-height: 100%;
     border: 1px solid #ece5da;
-    border-radius: 999px;
+    border-radius: 18px;
     padding: 12px 14px;
     background: linear-gradient(180deg, #ffffff 0%, #fdf8ef 100%);
     align-content: start;
+  }
+
+  .filterInlineList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .filterCheckboxLabel {
+    min-width: 0;
+    padding: 8px 10px;
+  }
+
+  .filterCheckboxLabel span:last-child {
+    min-width: 0;
+    word-break: break-word;
   }
 
   .filterLabel {
@@ -790,7 +800,7 @@
   }
 
   .productGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 12px;
   }
 
@@ -819,6 +829,86 @@
     min-height: 36px;
     letter-spacing: 0.08em;
   }
+
+  .sidebarCard {
+    max-height: none;
+  }
+
+  .categoryNav {
+    max-height: 372px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .mobileProductRail {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    gap: 0;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobileProductRail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobileProductCard {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    box-sizing: border-box;
+  }
+
+  .mobileProductCard .imageContainer {
+    aspect-ratio: 1 / 0.92;
+  }
+
+  .mobileProductCard .productInfo {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .mobileProductCard .productName {
+    font-size: 1rem;
+  }
+
+  .mobileProductCard .productMeta,
+  .mobileProductCard .ratingText,
+  .mobileProductCard .stockStatus {
+    font-size: 0.8rem;
+  }
+
+  .mobileProductCard .productPrice {
+    font-size: 1.02rem;
+  }
+
+  .mobileDots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+  }
+
+  .mobileDot {
+    width: 9px;
+    height: 9px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(184, 147, 102, 0.28);
+    padding: 0;
+    cursor: pointer;
+    transition: width 0.2s ease, background 0.2s ease;
+  }
+
+  .mobileDotActive {
+    width: 24px;
+    background: #8a6716;
+  }
 }
 
 @media (max-width: 540px) {
@@ -828,10 +918,6 @@
 
   .categoryTitle {
     font-size: 1.8rem;
-  }
-
-  .horizontalFiltersGrid {
-    grid-auto-columns: 88%;
   }
 
   .productGrid {
@@ -846,5 +932,9 @@
   .ratingText,
   .stockStatus {
     font-size: 0.72rem;
+  }
+
+  .filterInlineList {
+    grid-template-columns: 1fr;
   }
 }

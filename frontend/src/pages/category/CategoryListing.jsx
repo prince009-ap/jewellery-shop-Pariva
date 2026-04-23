@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
 import API, { API_BASE_URL } from "../../services/api";
@@ -63,10 +63,15 @@ export default function CategoryListing() {
   const { category } = useParams();
   const navigate = useNavigate();
   const { cart, addToCart: addToCartContext, updateQty } = useCart();
+  const productRailRef = useRef(null);
 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false
+  );
+  const [activeProductSlide, setActiveProductSlide] = useState(0);
   const [sortBy, setSortBy] = useState("newest");
   const [filters, setFilters] = useState({
     priceRange: [0, 2000000],
@@ -164,6 +169,19 @@ export default function CategoryListing() {
   useEffect(() => {
     applyFiltersAndSort();
   }, [applyFiltersAndSort]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    setActiveProductSlide(0);
+    if (productRailRef.current) {
+      productRailRef.current.scrollLeft = 0;
+    }
+  }, [category, filteredProducts.length, isMobileView]);
 
   const handleFilterChange = (filterType, value) => {
     setFilters((prev) => ({
@@ -481,7 +499,18 @@ export default function CategoryListing() {
             </div>
           </div>
 
-          <div className={styles.productGrid}>
+          <div
+            className={`${styles.productGrid} ${isMobileView ? styles.mobileProductRail : ""}`}
+            ref={productRailRef}
+            onScroll={() => {
+              if (!isMobileView || !productRailRef.current) return;
+              setActiveProductSlide(
+                Math.round(
+                  productRailRef.current.scrollLeft / productRailRef.current.clientWidth
+                )
+              );
+            }}
+          >
             {filteredProducts.map((product) => {
               const cartItem = cart.find(
                 (item) => item.product && item.product._id === product._id
@@ -491,7 +520,10 @@ export default function CategoryListing() {
               const totalReviews = Number(product.totalReviews || 0);
 
               return (
-              <article key={product._id} className={styles.productCard}>
+              <article
+                key={product._id}
+                className={`${styles.productCard} ${isMobileView ? styles.mobileProductCard : ""}`}
+              >
                 <div className={styles.imageContainer}>
                   <img
                     src={`${API_BASE_URL}/uploads/${product.image}`}
@@ -573,6 +605,28 @@ export default function CategoryListing() {
               </article>
             )})}
           </div>
+
+          {isMobileView && filteredProducts.length > 1 ? (
+            <div className={styles.mobileDots} aria-label="Category products">
+              {filteredProducts.map((product, index) => (
+                <button
+                  key={`${product._id}-dot`}
+                  type="button"
+                  className={`${styles.mobileDot} ${
+                    activeProductSlide === index ? styles.mobileDotActive : ""
+                  }`}
+                  aria-label={`Go to product ${index + 1}`}
+                  onClick={() => {
+                    if (!productRailRef.current) return;
+                    productRailRef.current.scrollTo({
+                      left: productRailRef.current.clientWidth * index,
+                      behavior: "smooth",
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
 
           {filteredProducts.length === 0 ? (
             <div className={styles.noProducts}>

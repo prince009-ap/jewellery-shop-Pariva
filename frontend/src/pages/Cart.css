@@ -574,6 +574,7 @@
     overflow-x: auto;
     gap: 0;
     scroll-snap-type: x mandatory;
+    scroll-padding-inline: 0;
     scrollbar-width: none;
   }
 
@@ -616,10 +617,14 @@
 
   .cart-item-card {
     flex: 0 0 100%;
+    min-width: 100%;
+    width: 100%;
     padding: 14px;
     gap: 14px;
     border-radius: 18px;
     scroll-snap-align: start;
+    scroll-snap-stop: always;
+    box-sizing: border-box;
   }
 
   .cart-item-media img {

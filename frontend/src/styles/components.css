@@ -1235,6 +1235,8 @@ strong {
   .mobile-product-page .product-card {
     min-width: 0;
     margin-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .mobile-product-rail {
@@ -1242,7 +1244,7 @@ strong {
   }
 
   .mobile-product-page .product-image-wrapper {
-    aspect-ratio: 4 / 4.15;
+    aspect-ratio: 1 / 0.94;
   }
 
   .mobile-product-page .product-info h3 {
@@ -1262,12 +1264,13 @@ strong {
 
   .mobile-product-page .product-price {
     min-width: 0;
-    font-size: 0.82rem;
+    font-size: 0.96rem;
   }
 
   .mobile-product-page .product-card {
-    padding: 0.65rem 0.65rem 0.82rem;
-    gap: 0.48rem;
+    padding: 0.85rem 0.85rem 1rem;
+    gap: 0.65rem;
+    border-radius: 20px;
   }
 
   .mobile-product-page .product-rating-row {
@@ -1275,7 +1278,7 @@ strong {
   }
 
   .mobile-product-page .product-rating-text {
-    font-size: 0.66rem;
+    font-size: 0.74rem;
   }
 
   .mobile-product-page .wishlist-heart {
@@ -1287,9 +1290,9 @@ strong {
   .mobile-product-page .pill-button.pill-small {
     width: 100%;
     justify-content: center;
-    min-height: 32px;
-    padding: 0.45rem 0.55rem;
-    font-size: 0.6rem;
+    min-height: 38px;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.68rem;
     letter-spacing: 0.12em;
   }
 
@@ -1382,8 +1385,8 @@ strong {
   }
 
   .mobile-product-page-1 .product-card {
-    max-width: min(100%, 360px);
-    margin-inline: auto;
+    max-width: 100%;
+    margin-inline: 0;
   }
 
   .mobile-rail-dots {

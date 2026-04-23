@@ -109,7 +109,7 @@ function Home() {
   const { totalItems } = useCart();
   const isMobileHeader = viewportWidth < 768;
   const isMobileView = viewportWidth < 768;
-  const mobileProductPageSize = viewportWidth < 420 ? 1 : 2;
+  const mobileProductPageSize = 1;
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
