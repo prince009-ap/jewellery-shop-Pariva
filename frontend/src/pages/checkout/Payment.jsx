@@ -1,6 +1,6 @@
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import "../../styles/loading.css";
 
 const APPLIED_COUPON_STORAGE_KEY = "appliedCartCoupon";
@@ -208,7 +208,7 @@ export default function Payment() {
               {items.map((item) => (
                 <div key={`${item.product}-${item.qty}`} className="checkout-summary-item">
                   <img
-                    src={`http://localhost:5000/uploads/${item.image}`}
+                    src={`${API_BASE_URL}/uploads/${item.image}`}
                     alt={item.name}
                     className="checkout-summary-item__image"
                   />

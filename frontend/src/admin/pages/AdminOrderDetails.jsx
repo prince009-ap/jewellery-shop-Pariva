@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
@@ -279,7 +280,7 @@ function AdminOrderDetails() {
           <div className="aod-items-list">
             {order.items?.map((item, i) => (
               <article className="aod-item" key={i}>
-                <img src={`http://localhost:5000/uploads/${item.image}`} alt={item.name} />
+                <img src={`${API_BASE_URL}/uploads/${item.image}`} alt={item.name} />
                 <div>
                   <p className="aod-item-name">{item.name}</p>
                   <p className="aod-item-meta">Quantity: {item.qty}</p>

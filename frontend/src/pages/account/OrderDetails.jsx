@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import OrderTimeline from "../../components/order/OrderTimeline";
 import ReviewForm from "../../components/ReviewForm";
 import "../../styles/loading.css";
@@ -400,7 +400,7 @@ function OrderDetails() {
                 }}
               >
                 <img
-                  src={`http://localhost:5000/uploads/${item.image}`}
+                  src={`${API_BASE_URL}/uploads/${item.image}`}
                   alt={item.name}
                   width="60"
                   className="order-details-item-image"

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { Link, useNavigate } from "react-router-dom";
 import useCart from "../../context/useCart";
 import QuantitySelector from "./QuantitySelector";
@@ -47,7 +48,7 @@ function ProductCard({ product }) {
   return (
     <article className="product-card">
       <Link to={`/product/${product._id}`} className="product-image-wrapper">
-        <img src={`http://localhost:5000/uploads/${product.image}`} alt={product.name} />
+        <img src={`${API_BASE_URL}/uploads/${product.image}`} alt={product.name} />
       </Link>
 
       <div className="product-info">

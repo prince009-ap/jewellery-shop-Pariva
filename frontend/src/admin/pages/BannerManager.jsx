@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
@@ -145,7 +146,7 @@ export default function BannerManager() {
                         <td data-label="Preview">
                           <div className="banner-preview-wrap">
                             <img
-                              src={`http://localhost:5000/uploads/${banner.imageDesktop}`}
+                              src={`${API_BASE_URL}/uploads/${banner.imageDesktop}`}
                               alt={banner.title || "Banner"}
                               className="banner-preview"
                             />

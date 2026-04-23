@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 
 export default function MyCustomRequests() {
   const [list, setList] = useState([]);
@@ -54,7 +54,7 @@ export default function MyCustomRequests() {
             <div>
               {d.referenceImage ? (
                 <img
-                  src={`http://localhost:5000/uploads/${d.referenceImage}`}
+                  src={`${API_BASE_URL}/uploads/${d.referenceImage}`}
                   alt="custom"
                   className="my-custom-requests-image"
                 />

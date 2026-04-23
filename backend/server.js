@@ -33,6 +33,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 console.log("Environment Variables Status:");
 console.log({
@@ -47,7 +51,14 @@ console.log({
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );

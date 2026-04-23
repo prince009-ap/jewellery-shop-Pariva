@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
@@ -128,7 +129,7 @@ function AdminOrders() {
 
   const getOrderImageSrc = (order) => {
     const image = order.items?.[0]?.image;
-    return image ? `http://localhost:5000/uploads/${image}` : "";
+    return image ? `${API_BASE_URL}/uploads/${image}` : "";
   };
 
   const sortedOrders = useMemo(() => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 
 export default function MyCustomDesigns() {
   const [designs, setDesigns] = useState([]);
@@ -215,7 +215,7 @@ export default function MyCustomDesigns() {
 function getImageSrc(image) {
   if (!image) return null;
   if (image.startsWith("http://") || image.startsWith("https://")) return image;
-  return `http://localhost:5000/uploads/${image}`;
+  return `${API_BASE_URL}/uploads/${image}`;
 }
 
 function getBudgetLabel(design) {

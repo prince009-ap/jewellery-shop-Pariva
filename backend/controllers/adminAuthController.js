@@ -234,8 +234,8 @@ export const verifyAdminOtp = async (req, res) => {
   res
     .cookie("adminToken", token, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     })
     .json({

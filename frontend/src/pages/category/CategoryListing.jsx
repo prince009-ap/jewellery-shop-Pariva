@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import useCart from "../../context/useCart";
 import QuantitySelector from "../../components/common/QuantitySelector";
 import WorkingWishlistHeart from "../../components/wishlist/WorkingWishlistHeart";
@@ -494,7 +494,7 @@ export default function CategoryListing() {
               <article key={product._id} className={styles.productCard}>
                 <div className={styles.imageContainer}>
                   <img
-                    src={`http://localhost:5000/uploads/${product.image}`}
+                    src={`${API_BASE_URL}/uploads/${product.image}`}
                     alt={product.name}
                     className={styles.productImage}
                     onError={(e) => {

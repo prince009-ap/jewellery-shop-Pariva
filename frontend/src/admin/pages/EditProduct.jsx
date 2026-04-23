@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import adminAPI from "../../services/adminApi";
@@ -53,7 +54,7 @@ function EditProduct() {
 
   const previewUrl = useMemo(() => {
     if (form.image) return URL.createObjectURL(form.image);
-    if (currentImage) return `http://localhost:5000/uploads/${currentImage}`;
+    if (currentImage) return `${API_BASE_URL}/uploads/${currentImage}`;
     return "";
   }, [form.image, currentImage]);
 

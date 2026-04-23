@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useCart from "../context/useCart";
 import QuantitySelector from "../components/common/QuantitySelector";
-import API from "../services/api";
+import API, { API_BASE_URL } from "../services/api";
 import "./Cart.css";
 import { getUserToken } from "../utils/authStorage";
 import { useAuthPrompt } from "../context/AuthPromptContext";
@@ -191,7 +191,7 @@ function Cart() {
               <article className="cart-item-card" key={item.product._id}>
                 <div className="cart-item-media">
                   <img
-                    src={`http://localhost:5000/uploads/${item.product.image}`}
+                    src={`${API_BASE_URL}/uploads/${item.product.image}`}
                     alt={item.product.name}
                   />
                 </div>

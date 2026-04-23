@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import "./MyFeedback.css";
 
 function MyFeedback() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const getImageSrc = (image) => (image ? `http://localhost:5000/uploads/${image}` : null);
+  const getImageSrc = (image) => (image ? `${API_BASE_URL}/uploads/${image}` : null);
 
   useEffect(() => {
     const loadReviews = async () => {

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
@@ -148,7 +149,7 @@ function ProductList() {
                     <td data-label="Image">
                       <div className="product-thumb-wrap">
                         <img
-                          src={`http://localhost:5000/uploads/${p.image}`}
+                          src={`${API_BASE_URL}/uploads/${p.image}`}
                           alt={p.name}
                           className="product-thumb"
                         />

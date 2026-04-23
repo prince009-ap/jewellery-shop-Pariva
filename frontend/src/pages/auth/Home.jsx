@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { MdFavoriteBorder, MdOutlineShoppingBag, MdPersonOutline } from "react-icons/md";
 import FilterBar from "../../components/common/FilterBar";
 import ProductCard from "../../components/common/ProductCard";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import useCart from "../../context/useCart";
 import { clearUserSession, getStoredUser } from "../../utils/authStorage";
@@ -511,7 +511,7 @@ function Home() {
                     style={{ cursor: "pointer" }}
                   >
                     <div className="category-image">
-                      <img src={`http://localhost:5000/uploads/${cat.image}`} alt={cat.name} />
+                      <img src={`${API_BASE_URL}/uploads/${cat.image}`} alt={cat.name} />
                     </div>
                     <h3>{cat.name}</h3>
                     <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>
@@ -530,7 +530,7 @@ function Home() {
                 style={{ cursor: "pointer" }}
               >
                 <div className="category-image">
-                  <img src={`http://localhost:5000/uploads/${cat.image}`} alt={cat.name} />
+                  <img src={`${API_BASE_URL}/uploads/${cat.image}`} alt={cat.name} />
                 </div>
                 <h3>{cat.name}</h3>
                 <p>Discover {cat.name.toLowerCase()} designed for modern jewellery wardrobes.</p>

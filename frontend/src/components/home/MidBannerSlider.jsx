@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
@@ -34,7 +34,7 @@ export default function MidBannerSlider({ category = "", fillHeight = false, fit
               <div className="mid-banner-image-wrapper">
                 <img
                   className="mid-banner-image"
-                  src={`http://localhost:5000/uploads/${b.imageDesktop}`}
+                  src={`${API_BASE_URL}/uploads/${b.imageDesktop}`}
                   alt={b.title || "Banner"}
                   loading="lazy"
                 />

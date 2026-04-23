@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import "../../styles/loading.css";
 
 function Orders() {
@@ -60,7 +60,7 @@ function Orders() {
 
   const getPreviewItem = (order) => order.items?.[0] || null;
 
-  const getImageSrc = (image) => (image ? `http://localhost:5000/uploads/${image}` : null);
+  const getImageSrc = (image) => (image ? `${API_BASE_URL}/uploads/${image}` : null);
 
   const getStatusBadgeStyle = (status) => {
     const baseStyle = {

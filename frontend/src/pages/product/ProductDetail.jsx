@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import API from "../../services/api";
+import API, { API_BASE_URL } from "../../services/api";
 import useCart from "../../context/useCart";
 import QuantitySelector from "../../components/common/QuantitySelector";
 import WishlistHeart from "../../components/wishlist/WishlistHeart";
@@ -196,7 +196,7 @@ export default function ProductDetail() {
         <div>
           <div className={styles.mainImageContainer}>
             <img
-              src={`http://localhost:5000/uploads/${galleryImages[selectedImage]}`}
+              src={`${API_BASE_URL}/uploads/${galleryImages[selectedImage]}`}
               alt={product.name}
               className={styles.mainImage}
               onError={(e) => {
@@ -210,7 +210,7 @@ export default function ProductDetail() {
               {galleryImages.map((img, index) => (
                 <img
                   key={img + index}
-                  src={`http://localhost:5000/uploads/${img}`}
+                  src={`${API_BASE_URL}/uploads/${img}`}
                   alt={`${product.name} ${index + 1}`}
                   className={`${styles.thumbnail} ${selectedImage === index ? styles.selected : ""}`}
                   onClick={() => setSelectedImage(index)}

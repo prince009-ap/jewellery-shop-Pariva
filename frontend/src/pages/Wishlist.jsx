@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../services/api";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useWishlist } from "../context/useWishlist";
@@ -91,7 +92,7 @@ function Wishlist() {
                     return (
                       <article key={p._id} className="wishlist-item">
                         <div className="wishlist-item-img">
-                          <img src={`http://localhost:5000/uploads/${p.image}`} alt={p.name} />
+                          <img src={`${API_BASE_URL}/uploads/${p.image}`} alt={p.name} />
                         </div>
 
                         <div className="wishlist-item-info">

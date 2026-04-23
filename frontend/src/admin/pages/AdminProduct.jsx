@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useEffect, useState } from "react";
 import adminAPI from "../../services/adminApi";
 import { Link } from "react-router-dom";
@@ -54,7 +55,7 @@ function AdminProduct() {
             <tr key={p._id}>
               <td>
                 <img
-                  src={`http://localhost:5000/uploads/${p.image}`}
+                  src={`${API_BASE_URL}/uploads/${p.image}`}
                   width="60"
                   alt={p.name}
                 />

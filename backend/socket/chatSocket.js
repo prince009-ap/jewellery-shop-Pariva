@@ -47,9 +47,14 @@ async function emitConversationList(io) {
 }
 
 export function createChatSocket(httpServer) {
+  const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   const io = new Server(httpServer, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: allowedOrigins,
       credentials: true,
     },
   });

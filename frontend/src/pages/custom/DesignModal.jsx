@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useState } from "react";
 import adminAPI from "../../services/adminApi";
 
@@ -90,7 +91,7 @@ export default function DesignModal({ design, onClose, onUpdate, onNotify }) {
         {design.referenceImage && (
           <img
             className="acd-modal-image"
-            src={`http://localhost:5000/uploads/${design.referenceImage}`}
+            src={`${API_BASE_URL}/uploads/${design.referenceImage}`}
             alt={design.jewelleryType || "Reference"}
           />
         )}

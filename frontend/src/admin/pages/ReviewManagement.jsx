@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../services/api";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
@@ -231,7 +232,7 @@ const ReviewManagement = () => {
                               className="review-product-thumb"
                               src={
                                 review.productId?.image
-                                  ? `http://localhost:5000/uploads/${review.productId.image}`
+                                  ? `${API_BASE_URL}/uploads/${review.productId.image}`
                                   : "/images/placeholder.jpg"
                               }
                               alt={review.productId?.name || "Product"}

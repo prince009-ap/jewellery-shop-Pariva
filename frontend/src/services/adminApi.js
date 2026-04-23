@@ -1,7 +1,8 @@
+import { API_BASE_URL } from "./api";
 import axios from "axios";
 
 const adminAPI = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: `${API_BASE_URL}/api`,
 });
 
 // 🔐 ADMIN TOKEN ONLY
