@@ -241,24 +241,24 @@ function AdminCoupons() {
                   const busy = busyCouponId === c._id;
                   return (
                     <tr key={c._id}>
-                      <td className="acp-code-cell">{c.code}</td>
-                      <td>{c.discountType}</td>
-                      <td>
+                      <td data-label="Code" className="acp-code-cell">{c.code}</td>
+                      <td data-label="Type">{c.discountType}</td>
+                      <td data-label="Value">
                         {c.discountType === "percent" ? `${c.discountValue}%` : `Rs ${c.discountValue}`}
                       </td>
-                      <td>Rs {c.minOrderValue}</td>
-                      <td>{c.firstOrderOnly ? "First Order Only" : "All Orders"}</td>
-                      <td>
+                      <td data-label="Min Order">Rs {c.minOrderValue}</td>
+                      <td data-label="Eligibility">{c.firstOrderOnly ? "First Order Only" : "All Orders"}</td>
+                      <td data-label="Expiry">
                         {c.expiryDate && new Date(c.expiryDate).getFullYear() > 1970
                           ? new Date(c.expiryDate).toLocaleDateString("en-IN")
                           : "-"}
                       </td>
-                      <td>
+                      <td data-label="Status">
                         <span className={`acp-status-pill ${c.isActive ? "active" : "disabled"}`}>
                           {c.isActive ? "Active" : "Disabled"}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Action">
                         <div className="acp-action-group">
                           <button
                             type="button"

@@ -545,6 +545,79 @@
   .acd-modal-card {
     padding: 16px;
   }
+
+  .acd-sort-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .acd-table-wrap {
+    overflow: visible;
+  }
+
+  .acd-table,
+  .acd-table thead,
+  .acd-table tbody,
+  .acd-table tr,
+  .acd-table th,
+  .acd-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .acd-table {
+    min-width: 0;
+  }
+
+  .acd-table thead {
+    display: none;
+  }
+
+  .acd-table tbody {
+    display: grid;
+    gap: 14px;
+  }
+
+  .acd-table tbody tr {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  }
+
+  .acd-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    border: none;
+    padding: 8px 0;
+  }
+
+  .acd-table td::before {
+    content: attr(data-label);
+    flex: 0 0 92px;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .acd-table td:last-child {
+    padding-bottom: 0;
+  }
+
+  .acd-status-pill,
+  .acd-open-btn {
+    margin-left: auto;
+  }
+
+  .acd-modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -557,5 +630,29 @@
   .acd-table-card,
   .acd-modal-card {
     padding: 12px;
+  }
+
+  .acd-table tbody tr {
+    padding: 12px;
+  }
+
+  .acd-table td {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .acd-table td::before {
+    flex: none;
+  }
+
+  .acd-status-pill,
+  .acd-open-btn {
+    margin-left: 0;
+  }
+
+  .acd-open-btn,
+  .acd-modal-btn {
+    width: 100%;
   }
 }

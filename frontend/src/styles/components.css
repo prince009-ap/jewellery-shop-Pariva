@@ -2337,4 +2337,41 @@ strong {
     width: 100%;
     min-width: 0;
   }
+
+  .saved-address-list {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-address-card {
+    padding: 1rem;
+    border-radius: 20px;
+  }
+
+  .addr-actions {
+    flex-direction: column;
+  }
+
+  .addr-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .address-page {
+    gap: 1.25rem;
+  }
+
+  .address-form-shell {
+    padding: 0.9rem;
+    border-radius: 18px;
+  }
+
+  .label-row {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-address-card {
+    padding: 0.9rem;
+    border-radius: 18px;
+  }
 }

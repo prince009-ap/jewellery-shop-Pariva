@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DatePicker from "../../components/common/DatePicker";
 import SelectDropdown from "../../components/common/SelectDropdown";
 import API from "../../services/api";
+import "./Profile.css";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -11,12 +12,12 @@ export default function Profile() {
     name: "",
     mobile: "",
     dob: "",
-    gender: ""
+    gender: "",
   });
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [message, setMessage] = useState("");
@@ -33,8 +34,8 @@ export default function Profile() {
       setEditForm({
         name: res.data.name || "",
         mobile: res.data.mobile || "",
-        dob: res.data.dob ? new Date(res.data.dob).toISOString().split('T')[0] : "",
-        gender: res.data.gender || ""
+        dob: res.data.dob ? new Date(res.data.dob).toISOString().split("T")[0] : "",
+        gender: res.data.gender || "",
       });
     } catch (error) {
       console.error("Failed to fetch profile:", error);
@@ -54,8 +55,8 @@ export default function Profile() {
       setEditForm({
         name: user.name || "",
         mobile: user.mobile || "",
-        dob: user.dob ? new Date(user.dob).toISOString().split('T')[0] : "",
-        gender: user.gender || ""
+        dob: user.dob ? new Date(user.dob).toISOString().split("T")[0] : "",
+        gender: user.gender || "",
       });
     }
     setMessage("");
@@ -78,14 +79,14 @@ export default function Profile() {
   const handleInputChange = (e) => {
     setEditForm({
       ...editForm,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   const handlePasswordInputChange = (e) => {
     setPasswordForm({
       ...passwordForm,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -106,12 +107,12 @@ export default function Profile() {
     try {
       await API.put("/auth/change-password", {
         currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
+        newPassword: passwordForm.newPassword,
       });
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
-        confirmPassword: ""
+        confirmPassword: "",
       });
       setShowPasswordSection(false);
       setPasswordMessage("Password changed successfully!");
@@ -123,10 +124,10 @@ export default function Profile() {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -140,12 +141,12 @@ export default function Profile() {
     color: "#334155",
     background: "linear-gradient(180deg, #ffffff 0%, #fffdfa 100%)",
     outline: "none",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)"
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)",
   };
 
   if (loading) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
+      <div className="profile-page-state">
         <div>Loading profile...</div>
       </div>
     );
@@ -153,116 +154,58 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
+      <div className="profile-page-state">
         <div>Failed to load profile</div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "2rem",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        border: "1px solid #e5e7eb"
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-          <h2 style={{ margin: 0, color: "#111827", fontSize: "1.5rem" }}>My Profile</h2>
+    <div className="profile-page">
+      <div className="profile-card">
+        <div className="profile-card-header">
+          <h2 className="profile-title">My Profile</h2>
           {!isEditing && (
-            <button
-              onClick={handleEditClick}
-              style={{
-                background: "#d4af37",
-                color: "white",
-                border: "none",
-                padding: "0.5rem 1rem",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: "500"
-              }}
-            >
+            <button onClick={handleEditClick} className="profile-btn profile-btn-primary profile-header-btn">
               Edit Profile
             </button>
           )}
         </div>
 
         {message && (
-          <div style={{
-            padding: "0.75rem",
-            marginBottom: "1rem",
-            borderRadius: "6px",
-            background: message.includes("success") ? "#d1fae5" : "#fee2e2",
-            color: message.includes("success") ? "#065f46" : "#991b1b",
-            border: `1px solid ${message.includes("success") ? "#a7f3d0" : "#fca5a5"}`
-          }}>
+          <div className={`profile-message ${message.includes("success") ? "success" : "error"}`}>
             {message}
           </div>
         )}
 
-        {/* Profile Information */}
-        <div style={{ display: "grid", gap: "1.5rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1.5rem" }}>
-            {/* Name */}
+        <div className="profile-content">
+          <div className="profile-grid">
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                Full Name
-              </label>
+              <label className="profile-label">Full Name</label>
               {isEditing ? (
-                <input
-                  type="text"
-                  name="name"
-                  value={editForm.name}
-                  onChange={handleInputChange}
-                  style={profileInputStyle}
-                />
+                <input type="text" name="name" value={editForm.name} onChange={handleInputChange} style={profileInputStyle} />
               ) : (
-                <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
-                  {user.name || "N/A"}
-                </div>
+                <div className="profile-readonly">{user.name || "N/A"}</div>
               )}
             </div>
 
-            {/* Email */}
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                Email Address
-              </label>
-              <div style={{ padding: "0.5rem", background: "#f3f4f6", borderRadius: "6px", color: "#6b7280" }}>
-                {user.email || "N/A"}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
-                Email cannot be changed
-              </div>
+              <label className="profile-label">Email Address</label>
+              <div className="profile-readonly profile-readonly-disabled">{user.email || "N/A"}</div>
+              <div className="profile-note">Email cannot be changed</div>
             </div>
 
-            {/* Mobile */}
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                Mobile Number
-              </label>
+              <label className="profile-label">Mobile Number</label>
               {isEditing ? (
-                <input
-                  type="tel"
-                  name="mobile"
-                  value={editForm.mobile}
-                  onChange={handleInputChange}
-                  style={profileInputStyle}
-                />
+                <input type="tel" name="mobile" value={editForm.mobile} onChange={handleInputChange} style={profileInputStyle} />
               ) : (
-                <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
-                  {user.mobile || "N/A"}
-                </div>
+                <div className="profile-readonly">{user.mobile || "N/A"}</div>
               )}
             </div>
 
-            {/* Gender */}
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                Gender
-              </label>
+              <label className="profile-label">Gender</label>
               {isEditing ? (
                 <SelectDropdown
                   name="gender"
@@ -277,60 +220,40 @@ export default function Profile() {
                   placeholder="Select Gender"
                 />
               ) : (
-                <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
+                <div className="profile-readonly">
                   {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : "N/A"}
                 </div>
               )}
             </div>
 
-            {/* Date of Birth */}
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                Date of Birth
-              </label>
+              <label className="profile-label">Date of Birth</label>
               {isEditing ? (
                 <div style={{ width: "100%" }}>
-                  <DatePicker
-                    name="dob"
-                    value={editForm.dob}
-                    onChange={handleInputChange}
-                  />
+                  <DatePicker name="dob" value={editForm.dob} onChange={handleInputChange} />
                 </div>
               ) : (
-                <div style={{ padding: "0.5rem", background: "#f9fafb", borderRadius: "6px", color: "#111827" }}>
-                  {formatDate(user.dob)}
-                </div>
+                <div className="profile-readonly">{formatDate(user.dob)}</div>
               )}
             </div>
           </div>
 
-          {/* Account Information */}
-          <div style={{
-            background: "#f9fafb",
-            padding: "1.5rem",
-            borderRadius: "8px",
-            border: "1px solid #e5e7eb"
-          }}>
-            <h3 style={{ margin: "0 0 1rem 0", color: "#111827", fontSize: "1.125rem" }}>Account Information</h3>
-            <div style={{ display: "grid", gap: "0.75rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.875rem" }}>
-                <span style={{ color: "#6b7280" }}>Account Type:</span>
-                <span style={{ color: "#111827", fontWeight: "500" }}>
+          <div className="profile-info-card">
+            <h3 className="profile-subtitle">Account Information</h3>
+            <div className="profile-info-list">
+              <div className="profile-info-row">
+                <span className="profile-info-label">Account Type:</span>
+                <span className="profile-info-value">
                   {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "User"}
                 </span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.875rem" }}>
-                <span style={{ color: "#6b7280" }}>Member Since:</span>
-                <span style={{ color: "#111827", fontWeight: "500" }}>
-                  {formatDate(user.createdAt)}
-                </span>
+              <div className="profile-info-row">
+                <span className="profile-info-label">Member Since:</span>
+                <span className="profile-info-value">{formatDate(user.createdAt)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.875rem" }}>
-                <span style={{ color: "#6b7280" }}>Account Status:</span>
-                <span style={{
-                  color: user.isBlocked ? "#dc2626" : "#059669",
-                  fontWeight: "500"
-                }}>
+              <div className="profile-info-row">
+                <span className="profile-info-label">Account Status:</span>
+                <span className={`profile-info-value ${user.isBlocked ? "blocked" : "active"}`}>
                   {user.isBlocked ? "Blocked" : "Active"}
                 </span>
               </div>
@@ -338,109 +261,48 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Edit Actions */}
         {isEditing && (
-          <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", paddingTop: "1rem", borderTop: "1px solid #e5e7eb" }}>
-            <button
-              onClick={handleSaveProfile}
-              style={{
-                background: "#d4af37",
-                color: "white",
-                border: "none",
-                padding: "0.75rem 1.5rem",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: "500"
-              }}
-            >
+          <div className="profile-actions">
+            <button onClick={handleSaveProfile} className="profile-btn profile-btn-primary">
               Save Changes
             </button>
-            <button
-              onClick={handleCancelEdit}
-              style={{
-                background: "white",
-                color: "#6b7280",
-                border: "1px solid #d1d5db",
-                padding: "0.75rem 1.5rem",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: "500"
-              }}
-            >
+            <button onClick={handleCancelEdit} className="profile-btn profile-btn-secondary">
               Cancel
             </button>
           </div>
         )}
       </div>
 
-      {/* Change Password Section */}
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "2rem",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        border: "1px solid #e5e7eb",
-        marginTop: "2rem"
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-          <h3 style={{ margin: 0, color: "#111827", fontSize: "1.25rem" }}>Change Password</h3>
-          <button
-            onClick={() => setShowPasswordSection(!showPasswordSection)}
-            style={{
-              background: "white",
-              color: "#6b7280",
-              border: "1px solid #d1d5db",
-              padding: "0.5rem 1rem",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              fontWeight: "500"
-            }}
-          >
+      <div className="profile-card profile-password-card">
+        <div className="profile-password-header">
+          <h3 className="profile-password-title">Change Password</h3>
+          <button onClick={() => setShowPasswordSection(!showPasswordSection)} className="profile-btn profile-btn-secondary profile-toggle-btn">
             {showPasswordSection ? "Hide" : "Show"}
           </button>
         </div>
 
         {showPasswordSection && (
-          <form onSubmit={handlePasswordChange} style={{ display: "grid", gap: "1rem" }}>
+          <form onSubmit={handlePasswordChange} className="profile-password-form">
             {passwordMessage && (
-              <div style={{
-                padding: "0.75rem",
-                borderRadius: "6px",
-                background: passwordMessage.includes("success") ? "#d1fae5" : "#fee2e2",
-                color: passwordMessage.includes("success") ? "#065f46" : "#991b1b",
-                border: `1px solid ${passwordMessage.includes("success") ? "#a7f3d0" : "#fca5a5"}`
-              }}>
+              <div className={`profile-message ${passwordMessage.includes("success") ? "success" : "error"}`}>
                 {passwordMessage}
               </div>
             )}
 
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                Current Password
-              </label>
+              <label className="profile-label">Current Password</label>
               <input
                 type="password"
                 name="currentPassword"
                 value={passwordForm.currentPassword}
                 onChange={handlePasswordInputChange}
                 required
-                style={{
-                  width: "100%",
-                  padding: "0.5rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem"
-                }}
+                className="profile-password-input"
               />
             </div>
 
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                New Password
-              </label>
+              <label className="profile-label">New Password</label>
               <input
                 type="password"
                 name="newPassword"
@@ -448,20 +310,12 @@ export default function Profile() {
                 onChange={handlePasswordInputChange}
                 required
                 minLength="6"
-                style={{
-                  width: "100%",
-                  padding: "0.5rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem"
-                }}
+                className="profile-password-input"
               />
             </div>
 
             <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", color: "#6b7280", fontSize: "0.875rem", fontWeight: "500" }}>
-                Confirm New Password
-              </label>
+              <label className="profile-label">Confirm New Password</label>
               <input
                 type="password"
                 name="confirmPassword"
@@ -469,30 +323,12 @@ export default function Profile() {
                 onChange={handlePasswordInputChange}
                 required
                 minLength="6"
-                style={{
-                  width: "100%",
-                  padding: "0.5rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem"
-                }}
+                className="profile-password-input"
               />
             </div>
 
-            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-              <button
-                type="submit"
-                style={{
-                  background: "#d4af37",
-                  color: "white",
-                  border: "none",
-                  padding: "0.75rem 1.5rem",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "0.875rem",
-                  fontWeight: "500"
-                }}
-              >
+            <div className="profile-actions profile-password-actions">
+              <button type="submit" className="profile-btn profile-btn-primary">
                 Change Password
               </button>
               <button
@@ -502,20 +338,11 @@ export default function Profile() {
                   setPasswordForm({
                     currentPassword: "",
                     newPassword: "",
-                    confirmPassword: ""
+                    confirmPassword: "",
                   });
                   setPasswordMessage("");
                 }}
-                style={{
-                  background: "white",
-                  color: "#6b7280",
-                  border: "1px solid #d1d5db",
-                  padding: "0.75rem 1.5rem",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "0.875rem",
-                  fontWeight: "500"
-                }}
+                className="profile-btn profile-btn-secondary"
               >
                 Cancel
               </button>

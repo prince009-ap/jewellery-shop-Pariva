@@ -175,8 +175,79 @@
     align-items: stretch;
   }
 
+  .review-sort-wrap,
+  .review-input-wrap {
+    width: 100%;
+  }
+
   .review-input-wrap input,
   .review-sort-wrap select {
     width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .review-filter-card {
+    padding: 14px;
+  }
+
+  .review-product-cell,
+  .review-user-cell {
+    align-items: flex-start;
+  }
+
+  .review-comment-cell {
+    max-width: none;
+  }
+
+  .review-pagination {
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding: 0.75rem 0 0;
+  }
+
+  .review-page-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .review-filter-title {
+    font-size: 1rem;
+  }
+
+  .review-filter-card {
+    padding: 12px;
+  }
+
+  .review-input-wrap input {
+    min-width: 0;
+  }
+
+  .review-user-cell,
+  .review-product-cell {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .review-product-thumb {
+    width: 52px;
+    height: 52px;
+  }
+
+  .review-user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .review-product-id-box {
+    min-height: 30px;
+    padding: 5px 10px;
+    font-size: 0.72rem;
+  }
+
+  .review-rating-stars {
+    font-size: 15px;
   }
 }

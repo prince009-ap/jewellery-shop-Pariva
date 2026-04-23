@@ -268,5 +268,17 @@
 
   .chat-launcher {
     align-self: flex-end;
+    padding: 12px 16px;
+  }
+
+  .profile-page,
+  .my-feedback-page,
+  .orders-page,
+  .order-details-page {
+    padding-bottom: 7.5rem !important;
+  }
+
+  .chat-widget-shell:not(.open) {
+    z-index: 900;
   }
 }

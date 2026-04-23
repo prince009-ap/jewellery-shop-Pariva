@@ -136,17 +136,17 @@ function AdminUsers() {
                   const isBusy = busyUserId === u._id;
                   return (
                     <tr key={u._id}>
-                      <td>{u.name}</td>
-                      <td className="au-email">{u.email}</td>
-                      <td>{u.mobile || "-"}</td>
-                      <td className="au-role">{u.role}</td>
-                      <td>{new Date(u.createdAt).toLocaleDateString("en-IN")}</td>
-                      <td>
+                      <td data-label="Name">{u.name}</td>
+                      <td data-label="Email" className="au-email">{u.email}</td>
+                      <td data-label="Mobile">{u.mobile || "-"}</td>
+                      <td data-label="Role" className="au-role">{u.role}</td>
+                      <td data-label="Joined">{new Date(u.createdAt).toLocaleDateString("en-IN")}</td>
+                      <td data-label="Status">
                         <span className={`au-status-pill ${u.isBlocked ? "blocked" : "active"}`}>
                           {u.isBlocked ? "Blocked" : "Active"}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Action">
                         <button
                           type="button"
                           className={`au-action-btn ${u.isBlocked ? "unblock" : "block"}`}

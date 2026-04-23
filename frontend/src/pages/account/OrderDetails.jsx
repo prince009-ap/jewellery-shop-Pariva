@@ -207,7 +207,7 @@ function OrderDetails() {
   const shippedAgeDays = getShippedAgeInDays(order);
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 900, margin: "auto" }}>
+    <div className="order-details-page" style={{ padding: "2rem", maxWidth: 900, margin: "auto" }}>
       <button
         type="button"
         className="order-details-top-action"
@@ -217,6 +217,7 @@ function OrderDetails() {
       </button>
 
       <div
+        className="order-details-card"
         style={{
           backgroundColor: "white",
           border: "1px solid #ddd",
@@ -232,6 +233,7 @@ function OrderDetails() {
         ) : null}
 
         <div
+          className="order-details-header"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -250,6 +252,7 @@ function OrderDetails() {
         </div>
 
         <div
+          className="order-details-summary"
           style={{
             backgroundColor: "#f8f9fa",
             padding: "1rem",
@@ -258,6 +261,7 @@ function OrderDetails() {
           }}
         >
           <div
+            className="order-details-summary-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
@@ -284,7 +288,7 @@ function OrderDetails() {
         </div>
 
         {order.orderStatus && (
-          <div style={{ marginBottom: "1.5rem" }}>
+          <div className="order-details-timeline" style={{ marginBottom: "1.5rem" }}>
             <OrderTimeline status={order.orderStatus} />
           </div>
         )}
@@ -326,6 +330,7 @@ function OrderDetails() {
             <h3>Shipment Tracking</h3>
             {order.shipmentTracking ? (
               <div
+                className="order-details-tracking-card"
                 style={{
                   marginBottom: "1rem",
                   padding: "1rem",
@@ -341,6 +346,7 @@ function OrderDetails() {
             ) : null}
             {order.trackingHistory.map((tracking, index) => (
               <div
+                className="order-details-tracking-card"
                 key={index}
                 style={{
                   marginBottom: "1rem",
@@ -357,9 +363,10 @@ function OrderDetails() {
           </>
         )}
 
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div className="order-details-address-section" style={{ marginBottom: "1.5rem" }}>
           <h4 style={{ margin: "0 0 1rem 0", color: "#333" }}>Delivery Address</h4>
           <div
+            className="order-details-address-box"
             style={{
               backgroundColor: "#f8f9fa",
               padding: "1rem",
@@ -371,7 +378,7 @@ function OrderDetails() {
           </div>
         </div>
 
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div className="order-details-items-section" style={{ marginBottom: "1.5rem" }}>
           <h4 style={{ margin: "0 0 1rem 0", color: "#333" }}>Items</h4>
 
           {order.items?.map((item, index) => {
@@ -380,6 +387,7 @@ function OrderDetails() {
 
             return (
               <div
+                className="order-details-item-card"
                 key={index}
                 style={{
                   display: "flex",
@@ -395,10 +403,11 @@ function OrderDetails() {
                   src={`http://localhost:5000/uploads/${item.image}`}
                   alt={item.name}
                   width="60"
+                  className="order-details-item-image"
                   style={{ borderRadius: "6px", objectFit: "cover" }}
                 />
 
-                <div style={{ flex: 1 }}>
+                <div className="order-details-item-copy" style={{ flex: 1 }}>
                   <strong style={{ display: "block", marginBottom: "0.25rem" }}>
                     {item.name}
                   </strong>
@@ -431,7 +440,7 @@ function OrderDetails() {
                     ))}
                 </div>
 
-                <div style={{ textAlign: "right" }}>
+                <div className="order-details-item-price" style={{ textAlign: "right" }}>
                   <strong style={{ color: "#d4af37" }}>
                     Rs.{(item.price * item.qty).toLocaleString("en-IN")}
                   </strong>
@@ -442,7 +451,7 @@ function OrderDetails() {
         </div>
 
         {order.orderStatus?.toLowerCase() === "delivered" && (
-          <div style={{ marginTop: "2rem" }}>
+          <div className="order-details-reviews-section" style={{ marginTop: "2rem" }}>
             <h4 style={{ margin: "0 0 1rem 0", color: "#333" }}>
               Reviews for this Order ({orderReviews.length})
             </h4>
@@ -469,10 +478,11 @@ function OrderDetails() {
                 </p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="order-details-reviews-list" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 {orderReviews.map((review) => (
                   <div
                     key={review._id}
+                    className="order-details-review-card"
                     style={{
                       backgroundColor: "#fff",
                       border: "1px solid #e5e7eb",
@@ -482,6 +492,7 @@ function OrderDetails() {
                     }}
                   >
                     <div
+                      className="order-details-review-head"
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
@@ -489,7 +500,7 @@ function OrderDetails() {
                         marginBottom: "1rem",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div className="order-details-review-user" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div
                           style={{
                             width: "40px",
@@ -516,7 +527,7 @@ function OrderDetails() {
                         </div>
                       </div>
 
-                      <div style={{ textAlign: "right" }}>
+                      <div className="order-details-review-meta" style={{ textAlign: "right" }}>
                         <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>
                           {new Date(review.createdAt).toLocaleDateString("en-US", {
                             year: "numeric",
@@ -555,9 +566,10 @@ function OrderDetails() {
           </div>
         )}
 
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div className="order-details-price-section" style={{ marginBottom: "1.5rem" }}>
           <h4 style={{ margin: "0 0 1rem 0", color: "#333" }}>Price Details</h4>
           <div
+            className="order-details-price-card"
             style={{
               backgroundColor: "#f8f9fa",
               padding: "1rem",
@@ -622,6 +634,7 @@ function OrderDetails() {
       {showReviewModal && selectedProductForReview && (
         <div className="page-loading-overlay">
           <div
+            className="order-details-review-modal"
             style={{
               backgroundColor: "#fff",
               padding: "2rem",

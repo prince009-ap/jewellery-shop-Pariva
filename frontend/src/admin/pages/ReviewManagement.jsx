@@ -214,7 +214,7 @@ const ReviewManagement = () => {
                   <tbody>
                     {filteredReviews.map((review) => (
                       <tr key={review._id}>
-                        <td>
+                        <td data-label="User">
                           <div className="review-user-cell">
                             <div className="review-user-avatar">
                               {review.userId?.name?.charAt(0)?.toUpperCase() || "U"}
@@ -225,7 +225,7 @@ const ReviewManagement = () => {
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Product">
                           <div className="review-product-cell">
                             <img
                               className="review-product-thumb"
@@ -244,13 +244,13 @@ const ReviewManagement = () => {
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Rating">
                           <span className="review-rating-stars">{getRatingStars(review.rating)}</span>
                           <div className="review-rating-meta">{review.rating}/5</div>
                         </td>
-                        <td className="review-comment-cell">{review.comment}</td>
-                        <td>{formatDate(review.createdAt)}</td>
-                        <td>
+                        <td data-label="Comment" className="review-comment-cell">{review.comment}</td>
+                        <td data-label="Date">{formatDate(review.createdAt)}</td>
+                        <td data-label="Actions">
                           <button className="banner-pill-btn delete-btn" onClick={() => setPendingDelete(review)}>
                             Delete
                           </button>

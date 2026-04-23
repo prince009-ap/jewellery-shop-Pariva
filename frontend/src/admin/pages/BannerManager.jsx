@@ -142,7 +142,7 @@ export default function BannerManager() {
 
                     return (
                       <tr key={banner._id}>
-                        <td>
+                        <td data-label="Preview">
                           <div className="banner-preview-wrap">
                             <img
                               src={`http://localhost:5000/uploads/${banner.imageDesktop}`}
@@ -152,25 +152,25 @@ export default function BannerManager() {
                           </div>
                         </td>
 
-                        <td className="banner-title-cell">{banner.title || "-"}</td>
+                        <td data-label="Title" className="banner-title-cell">{banner.title || "-"}</td>
 
-                        <td className="banner-target-cell">
+                        <td data-label="Target" className="banner-target-cell">
                           {banner.targetType === "category"
                             ? `Category: ${banner.targetValue || "-"}`
                             : "Homepage Global"}
                         </td>
 
-                        <td className="banner-target-cell">
+                        <td data-label="Audience" className="banner-target-cell">
                           {banner.audienceType === "before_first_order"
                             ? "Before First Order"
                             : "All Users"}
                         </td>
 
-                        <td className="banner-target-cell">
+                        <td data-label="Schedule" className="banner-target-cell">
                           {formatDate(banner.startAt)} to {formatDate(banner.endAt)}
                         </td>
 
-                        <td>
+                        <td data-label="Status">
                           <button
                             className={`banner-pill-btn status-btn ${computedStatus.className}`}
                             onClick={() => toggleStatus(banner._id)}
@@ -180,7 +180,7 @@ export default function BannerManager() {
                           </button>
                         </td>
 
-                        <td>
+                        <td data-label="Actions">
                           <button
                             className="banner-pill-btn delete-btn"
                             onClick={() => setPendingDelete(banner)}

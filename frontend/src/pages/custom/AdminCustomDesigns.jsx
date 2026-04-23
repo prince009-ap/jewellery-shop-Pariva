@@ -145,19 +145,19 @@ export default function AdminCustomDesigns() {
               <tbody>
                 {sortedList.map((d) => (
                   <tr key={d._id}>
-                    <td className="acd-user-cell">{d.userId?.name || "N/A"}</td>
-                    <td className="acd-contact-cell">
+                    <td data-label="User" className="acd-user-cell">{d.userId?.name || "N/A"}</td>
+                    <td data-label="Contact" className="acd-contact-cell">
                       <p>{d.userId?.email || "N/A"}</p>
                       <p>{d.userId?.mobile || "No mobile"}</p>
                     </td>
-                    <td>{d.jewelleryType || "N/A"}</td>
-                    <td>{d.metalType || "N/A"}</td>
-                    <td>
+                    <td data-label="Jewellery">{d.jewelleryType || "N/A"}</td>
+                    <td data-label="Metal">{d.metalType || "N/A"}</td>
+                    <td data-label="Status">
                       <span className={`acd-status-pill ${getStatusPillClass(d.status)}`}>
                         {d.status || "pending"}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="View">
                       <button type="button" className="acd-open-btn" onClick={() => setSelected(d)}>
                         Open
                       </button>

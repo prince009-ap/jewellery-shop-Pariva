@@ -398,6 +398,75 @@
   .banner-modal-card {
     padding: 18px;
   }
+
+  .banner-table-wrap {
+    overflow: visible;
+  }
+
+  .banner-table,
+  .banner-table thead,
+  .banner-table tbody,
+  .banner-table tr,
+  .banner-table th,
+  .banner-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .banner-table {
+    min-width: 0;
+  }
+
+  .banner-table thead {
+    display: none;
+  }
+
+  .banner-table tbody {
+    display: grid;
+    gap: 14px;
+  }
+
+  .banner-table tbody tr {
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  }
+
+  .banner-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    border: none;
+    padding: 8px 0;
+  }
+
+  .banner-table td::before {
+    content: attr(data-label);
+    flex: 0 0 90px;
+    color: var(--ink-500);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .banner-table td:last-child {
+    padding-bottom: 0;
+  }
+
+  .banner-preview-wrap {
+    width: min(100%, 220px);
+    height: 120px;
+    margin-left: auto;
+  }
+
+  .status-btn,
+  .delete-btn {
+    margin-left: auto;
+  }
 }
 
 @media (max-width: 480px) {
@@ -416,12 +485,9 @@
   }
 
   .banner-preview-wrap {
-    width: 100px;
-    height: 70px;
-  }
-
-  .banner-table {
-    font-size: 0.8rem;
+    width: 100%;
+    max-width: none;
+    height: 156px;
   }
 
   .banner-modal-card {
@@ -430,5 +496,34 @@
 
   .banner-modal-card h3 {
     font-size: 1.3rem;
+  }
+
+  .banner-table-card {
+    padding: 12px;
+  }
+
+  .banner-table {
+    font-size: 0.8rem;
+  }
+
+  .banner-table tbody tr {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .banner-table td {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .banner-table td::before {
+    flex: none;
+  }
+
+  .status-btn,
+  .delete-btn {
+    width: 100%;
+    margin-left: 0;
   }
 }
