@@ -92,6 +92,10 @@ export default function ChatWidget() {
   const fileInputRef = useRef(null);
   const location = useLocation();
   const shouldRaiseForCheckout = location.pathname.startsWith("/checkout");
+  const shouldDeferLauncher =
+    location.pathname.startsWith("/custom-design") ||
+    location.pathname.startsWith("/my-custom-designs") ||
+    location.pathname.startsWith("/account/profile");
 
   const title = useMemo(() => {
     if (conversation?.mode === "agent") return "Live Support";
@@ -335,6 +339,8 @@ export default function ChatWidget() {
     <div
       className={`chat-widget-shell ${open ? "open" : ""} ${
         shouldRaiseForCheckout ? "chat-widget-shell--raised" : ""
+      } ${shouldDeferLauncher ? "chat-widget-shell--defer" : ""} ${
+        shouldDeferLauncher && open ? "chat-widget-shell--defer-open" : ""
       }`}
     >
       {open ? (

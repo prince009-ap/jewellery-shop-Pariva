@@ -1733,6 +1733,160 @@ const styles = `
     padding: 1rem;
   }
 }
+
+/* ===== Pariva Theme Overrides ===== */
+.custom-page {
+  background:
+    radial-gradient(920px 440px at 0% -10%, #fff8df 0%, transparent 60%),
+    radial-gradient(1180px 640px at 100% 0%, #def3ee 0%, transparent 56%),
+    linear-gradient(180deg, #f4efe2 0%, #edf3f5 100%);
+}
+
+.custom-breadcrumb a,
+.custom-breadcrumb span {
+  color: #607286;
+}
+
+.page-header {
+  background: transparent;
+  color: #233a55;
+  padding: 2rem 2rem 1rem;
+}
+
+.page-header::before {
+  display: none;
+}
+
+.hero-kicker,
+.custom-step-indicator {
+  color: #b48313;
+}
+
+.page-header h1 {
+  color: #233a55;
+  text-shadow: none;
+}
+
+.page-header p {
+  color: #516172;
+}
+
+.form-container,
+.estimate-card,
+.review-section,
+.review-card,
+.form-section,
+.suggestion-card,
+.recommendation-card,
+.purpose-suggestions,
+.budget-recommendations {
+  border: 1px solid #dbe4ee;
+  box-shadow: 0 14px 38px rgba(30, 47, 71, 0.08);
+}
+
+.form-container,
+.estimate-card,
+.review-card,
+.suggestion-card,
+.recommendation-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 250, 241, 0.96) 54%, rgba(242, 248, 251, 0.98) 100%);
+}
+
+.form-section,
+.review-section {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 250, 252, 0.98) 100%);
+}
+
+.section-title,
+.estimate-card h3,
+.estimate-details h4,
+.review-card h3,
+.field-label,
+.selection-list li strong {
+  color: #20344f;
+}
+
+.section-title::after,
+.pill-toggle.active,
+.primary-btn,
+.range-input::-webkit-slider-thumb {
+  background: linear-gradient(180deg, #fffef8 0%, #f1e7cf 100%);
+}
+
+.pill-toggle,
+.secondary-btn,
+.textarea-input,
+.file-input {
+  border-color: #dbe4ee;
+  color: #526275;
+}
+
+.pill-toggle:hover,
+.secondary-btn:hover,
+.textarea-input:focus,
+.file-input:hover {
+  border-color: #c9aa63;
+  box-shadow: 0 0 0 4px rgba(198, 164, 107, 0.12);
+}
+
+.pill-toggle.active,
+.primary-btn {
+  border-color: #d0bb8d;
+  color: #7f5b08;
+  box-shadow: 0 10px 24px rgba(180, 131, 19, 0.1);
+}
+
+.estimate-price {
+  background: none;
+  -webkit-text-fill-color: initial;
+  color: #7f5b08;
+}
+
+.estimate-note,
+.review-list li,
+.field-hint,
+.budget-range,
+.custom-breadcrumb {
+  color: #64748b;
+}
+
+.purpose-suggestions,
+.budget-recommendations,
+.budget-status.within-budget,
+.budget-status.over-budget,
+.budget-tip {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 250, 252, 0.98) 100%);
+}
+
+.purpose-suggestions,
+.budget-recommendations {
+  border-color: #dbe4ee;
+}
+
+.suggestion-title {
+  color: #233a55;
+}
+
+.recommendation-card.recommended,
+.budget-status.within-budget {
+  border-color: #bfe0cb;
+}
+
+.recommendation-card.avoid,
+.budget-status.over-budget {
+  border-color: #efc6cd;
+}
+
+.budget-tip {
+  border: 1px solid #dbe4ee;
+  color: #42546b;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1.25rem 1rem 0.5rem;
+  }
+}
 `;
 
 // Inject styles into the document head
