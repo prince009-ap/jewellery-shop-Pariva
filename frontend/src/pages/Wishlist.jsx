@@ -1,9 +1,9 @@
-import { API_BASE_URL } from "../services/api";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useWishlist } from "../context/useWishlist";
 import useCart from "../context/useCart";
 import QuantitySelector from "../components/common/QuantitySelector";
+import { getProductImageSrc } from "../utils/imageUrl";
 import "./Wishlist.css";
 
 function Wishlist() {
@@ -92,7 +92,13 @@ function Wishlist() {
                     return (
                       <article key={p._id} className="wishlist-item">
                         <div className="wishlist-item-img">
-                          <img src={`${API_BASE_URL}/uploads/${p.image}`} alt={p.name} />
+                          <img
+                            src={getProductImageSrc(p.image)}
+                            alt={p.name}
+                            onError={(e) => {
+                              e.currentTarget.src = "/images/placeholder.jpg";
+                            }}
+                          />
                         </div>
 
                         <div className="wishlist-item-info">

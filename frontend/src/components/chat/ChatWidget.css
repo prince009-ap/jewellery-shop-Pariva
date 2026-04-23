@@ -308,17 +308,25 @@
   }
 
   .chat-input-row {
-    grid-template-columns: 44px minmax(0, 1fr) 64px;
+    grid-template-columns: 52px minmax(0, 1fr) 88px;
     gap: 8px;
   }
 
+  .chat-attach-button {
+    width: 52px;
+    min-height: 44px;
+    border-radius: 14px;
+  }
+
   .chat-input-row button {
-    padding: 0 12px;
-    font-size: 0.88rem;
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 0.9rem;
   }
 
   .chat-input-row input {
-    padding: 11px 12px;
+    min-height: 44px;
+    padding: 11px 14px;
   }
 
   .profile-page,

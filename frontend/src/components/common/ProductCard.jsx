@@ -1,4 +1,3 @@
-import { API_BASE_URL } from "../../services/api";
 import { Link, useNavigate } from "react-router-dom";
 import useCart from "../../context/useCart";
 import QuantitySelector from "./QuantitySelector";
@@ -6,6 +5,7 @@ import WishlistHeart from "../wishlist/WishlistHeart";
 import StarRating from "../StarRating";
 import { getUserToken } from "../../utils/authStorage";
 import { useAuthPrompt } from "../../context/AuthPromptContext";
+import { getProductImageSrc } from "../../utils/imageUrl";
 
 function ProductCard({ product }) {
   const { cart, addToCart, updateQty } = useCart();
@@ -48,7 +48,13 @@ function ProductCard({ product }) {
   return (
     <article className="product-card">
       <Link to={`/product/${product._id}`} className="product-image-wrapper">
-        <img src={`${API_BASE_URL}/uploads/${product.image}`} alt={product.name} />
+        <img
+          src={getProductImageSrc(product.image)}
+          alt={product.name}
+          onError={(e) => {
+            e.currentTarget.src = "/images/placeholder.jpg";
+          }}
+        />
       </Link>
 
       <div className="product-info">

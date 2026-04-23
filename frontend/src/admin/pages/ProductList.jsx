@@ -1,8 +1,8 @@
-import { API_BASE_URL } from "../../services/api";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
 import adminAPI from "../../services/adminApi";
+import { getProductImageSrc } from "../../utils/imageUrl";
 import "./ProductList.css";
 
 function ProductList() {
@@ -149,9 +149,12 @@ function ProductList() {
                     <td data-label="Image">
                       <div className="product-thumb-wrap">
                         <img
-                          src={`${API_BASE_URL}/uploads/${p.image}`}
+                          src={getProductImageSrc(p.image)}
                           alt={p.name}
                           className="product-thumb"
+                          onError={(e) => {
+                            e.currentTarget.src = "/images/placeholder.jpg";
+                          }}
                         />
                       </div>
                     </td>

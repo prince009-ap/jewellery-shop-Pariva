@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import SelectDropdown from "../../components/common/SelectDropdown";
-import API, { API_BASE_URL } from "../../services/api";
+import API from "../../services/api";
 import useCart from "../../context/useCart";
 import QuantitySelector from "../../components/common/QuantitySelector";
 import WorkingWishlistHeart from "../../components/wishlist/WorkingWishlistHeart";
 import StarRating from "../../components/StarRating";
 import { PRODUCT_CATEGORIES } from "../../constants/productOptions";
+import { getProductImageSrc } from "../../utils/imageUrl";
 import styles from "./CategoryListing.module.css";
 
 const CATEGORY_DESCRIPTIONS = {
@@ -526,7 +527,7 @@ export default function CategoryListing() {
               >
                 <div className={styles.imageContainer}>
                   <img
-                    src={`${API_BASE_URL}/uploads/${product.image}`}
+                    src={getProductImageSrc(product.image)}
                     alt={product.name}
                     className={styles.productImage}
                     onError={(e) => {
