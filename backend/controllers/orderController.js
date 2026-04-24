@@ -65,6 +65,66 @@ const applyAutoShipmentTracking = (order, nextStatus) => {
   return false;
 };
 
+const isPdfBuffer = (buffer) =>
+  Buffer.isBuffer(buffer) && buffer.slice(0, 4).toString() === "%PDF";
+
+const saveInvoiceSnapshot = (order, invoiceBuffer) => {
+  if (!isPdfBuffer(invoiceBuffer)) {
+    throw new Error("Generated invoice is not a valid PDF buffer");
+  }
+
+  const invoiceFilename = `invoice_${order._id}.pdf`;
+  const invoicePath = path.join(process.cwd(), "uploads", "invoices", invoiceFilename);
+  let persistedPath = "";
+
+  try {
+    const invoicesDir = path.dirname(invoicePath);
+    if (!fs.existsSync(invoicesDir)) {
+      fs.mkdirSync(invoicesDir, { recursive: true });
+    }
+
+    fs.writeFileSync(invoicePath, invoiceBuffer);
+    persistedPath = invoicePath;
+  } catch (error) {
+    console.warn("Invoice persistence skipped:", error.message);
+  }
+
+  order.invoice.generated = true;
+  order.invoice.filename = invoiceFilename;
+  order.invoice.path = persistedPath;
+  order.invoice.generatedAt = new Date();
+
+  return {
+    filename: invoiceFilename,
+    path: persistedPath,
+    buffer: invoiceBuffer,
+  };
+};
+
+const getStoredInvoiceBuffer = (order) => {
+  if (!order?.invoice?.path || !fs.existsSync(order.invoice.path)) {
+    return null;
+  }
+
+  const fileBuffer = fs.readFileSync(order.invoice.path);
+  return isPdfBuffer(fileBuffer) ? fileBuffer : null;
+};
+
+const getInvoicePayload = async (order) => {
+  const existingBuffer = getStoredInvoiceBuffer(order);
+  if (existingBuffer) {
+    return {
+      filename: order.invoice?.filename || `invoice_${order._id}.pdf`,
+      buffer: existingBuffer,
+    };
+  }
+
+  const invoiceBuffer = await generateInvoice(order);
+  const savedInvoice = saveInvoiceSnapshot(order, invoiceBuffer);
+  await order.save();
+  return savedInvoice;
+};
+
 // Get invoice download
 export const getInvoiceDownload = async (req, res) => {
   try {
@@ -77,135 +137,26 @@ export const getInvoiceDownload = async (req, res) => {
       });
     }
 
-    console.log("📄 Invoice download request for order:", orderId);
-
-    // Find order belonging to user
     const order = await Order.findOne({ 
       _id: orderId, 
       user: req.user.id 
     });
 
     if (!order) {
-      console.log("❌ Order not found or unauthorized");
       return res.status(404).json({
         success: false,
         message: "Order not found"
       });
     }
 
-    // Check if invoice exists
-    if (!order.invoice.generated || !order.invoice.path) {
-      console.log("❌ Invoice not generated for order:", orderId);
-      
-      // Generate invoice on-demand
-      try {
-        console.log("📄 Generating invoice on-demand...");
-        const invoiceBuffer = await generateInvoice(order);
-        
-        // Create invoice filename
-        const invoiceFilename = `invoice_${order._id}_${Date.now()}.pdf`;
-        const invoicePath = path.join(__dirname, "../uploads/invoices", invoiceFilename);
-        
-        // Ensure invoices directory exists
-        const invoicesDir = path.dirname(invoicePath);
-        if (!fs.existsSync(invoicesDir)) {
-          fs.mkdirSync(invoicesDir, { recursive: true });
-        }
-        
-        // Save invoice file
-        fs.writeFileSync(invoicePath, invoiceBuffer);
-        
-        // Update order with invoice info
-        order.invoice.generated = true;
-        order.invoice.filename = invoiceFilename;
-        order.invoice.path = invoicePath;
-        order.invoice.generatedAt = new Date();
-        await order.save();
-        
-        console.log("📄 On-demand invoice generated:", invoicePath);
-      } catch (invoiceError) {
-        console.error("❌ On-demand invoice generation failed:", invoiceError);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to generate invoice"
-        });
-      }
-    }
+    const invoiceFile = await getInvoicePayload(order);
 
-    // Check if file exists
-    if (!fs.existsSync(order.invoice.path)) {
-      console.log("❌ Invoice file not found:", order.invoice.path);
-      return res.status(404).json({
-        success: false,
-        message: "Invoice file not found"
-      });
-    }
-
-    console.log("📄 Serving invoice file:", order.invoice.path);
-    
-    // Read the file first to verify it's a valid PDF
-    const fileBuffer = fs.readFileSync(order.invoice.path);
-    console.log(`📄 File size: ${fileBuffer.length} bytes`);
-    
-    // Check if it's a valid PDF by checking header
-    const pdfHeader = fileBuffer.slice(0, 4).toString();
-    console.log(`📄 File header: "${pdfHeader}"`);
-    
-    if (pdfHeader !== '%PDF') {
-      console.error("❌ Invalid PDF file header:", pdfHeader);
-      
-      // Try to regenerate the invoice
-      console.log("🔄 Regenerating invoice...");
-      try {
-        const newPdfBuffer = await generateInvoice(order);
-        console.log(`📄 New PDF generated: ${newPdfBuffer.length} bytes`);
-        
-        // Update order with new invoice
-        const invoiceFilename = `invoice_${order._id}_${Date.now()}.pdf`;
-        const invoicePath = path.join(__dirname, "../uploads/invoices", invoiceFilename);
-        
-        // Ensure directory exists
-        const invoicesDir = path.dirname(invoicePath);
-        if (!fs.existsSync(invoicesDir)) {
-          fs.mkdirSync(invoicesDir, { recursive: true });
-        }
-        
-        // Save new invoice
-        fs.writeFileSync(invoicePath, newPdfBuffer);
-        
-        // Update order
-        order.invoice.generated = true;
-        order.invoice.filename = invoiceFilename;
-        order.invoice.path = invoicePath;
-        order.invoice.generatedAt = new Date();
-        await order.save();
-        
-        // Set headers and send new PDF
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${invoiceFilename}"`);
-        res.setHeader('Content-Length', newPdfBuffer.length);
-        res.send(newPdfBuffer);
-        return;
-        
-      } catch (regenError) {
-        console.error("❌ Failed to regenerate invoice:", regenError);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to generate valid PDF invoice"
-        });
-      }
-    }
-    
-    // Set headers for PDF download
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${order.invoice.filename}"`);
-    res.setHeader('Content-Length', fileBuffer.length);
-    
-    // Send the file buffer directly
-    res.send(fileBuffer);
-
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${invoiceFile.filename}"`);
+    res.setHeader("Content-Length", invoiceFile.buffer.length);
+    res.send(invoiceFile.buffer);
   } catch (error) {
-    console.error("❌ Error in getInvoiceDownload:", error);
+    console.error("Error in getInvoiceDownload:", error);
     res.status(500).json({
       success: false,
       message: "Failed to download invoice",
@@ -391,7 +342,9 @@ if (!populatedOrder.user || !populatedOrder.shippingAddress) {
 }
 
 // ✅ GENERATE INVOICE ONLY HERE
-const invoicePath = await generateInvoice(populatedOrder);
+const invoiceBuffer = await generateInvoice(populatedOrder);
+const savedInvoice = saveInvoiceSnapshot(order, invoiceBuffer);
+await order.save();
 
     const orderDetailsUrl = buildClientUrl(`/account/orders/${order._id}`);
 
@@ -442,14 +395,14 @@ const invoicePath = await generateInvoice(populatedOrder);
                   <div style="flex: 1; min-width: 200px;">
                     <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Full Name:</strong> ${req.user.name || 'Customer'}</p>
                     <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Email:</strong> ${req.user.email || 'customer@example.com'}</p>
-                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Mobile:</strong> ${order.shippingAddress?.mobile || req.user.mobile || ''}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Mobile:</strong> ${order.shippingAddress?.phone || req.user.mobile || ''}</p>
                   </div>
                   <div style="flex: 1; min-width: 200px;">
                     <p style="margin: 8px 0; color: #cccccc; font-size: 14px;"><strong style="color: #d4af37;">Shipping Address:</strong></p>
                     <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">${order.shippingAddress?.name || 'Home'}</p>
-                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">${order.shippingAddress?.addressLine || ''}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">${order.shippingAddress?.address || ''}</p>
                     <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">${order.shippingAddress?.city || ''}, ${order.shippingAddress?.state || 'Gujarat'} ${order.shippingAddress?.pincode || ''}</p>
-                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">Phone: ${order.shippingAddress?.mobile || ''}</p>
+                    <p style="margin: 8px 0; color: #cccccc; font-size: 14px; line-height: 1.4;">Phone: ${order.shippingAddress?.phone || ''}</p>
                   </div>
                 </div>
               </div>
@@ -515,12 +468,12 @@ const invoicePath = await generateInvoice(populatedOrder);
               <div style="display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
                 <div style="flex: 1; min-width: 250px; background-color: #333333; padding: 20px; border-radius: 12px; border-left: 4px solid #d4af37;">
                   <h3 style="margin: 0 0 10px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Payment Method</h3>
-                  <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: 500;">${order.paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}</p>
+                  <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: 500;">${order.payment?.method === "cod" ? "Cash on Delivery" : "Online Payment"}</p>
                 </div>
                 <div style="flex: 1; min-width: 250px; background-color: #333333; padding: 20px; border-radius: 12px; border-left: 4px solid #d4af37;">
                   <h3 style="margin: 0 0 10px 0; color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Payment Status</h3>
-                  <div style="display: inline-block; padding: 8px 16px; background-color: ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"}; border-radius: 20px; border: 2px solid ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"};">
-                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.paymentStatus}</span>
+                  <div style="display: inline-block; padding: 8px 16px; background-color: ${order.payment?.status === "paid" ? "#d4af37" : "#ff6b35"}; border-radius: 20px; border: 2px solid ${order.payment?.status === "paid" ? "#d4af37" : "#ff6b35"};">
+                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.payment?.status || "pending"}</span>
                   </div>
                 </div>
               </div>
@@ -554,7 +507,7 @@ const invoicePath = await generateInvoice(populatedOrder);
       attachments: [
   {
     filename: `invoice-${order._id}.pdf`,
-    content: invoicePath,   // 👈 IMPORTANT
+    content: invoiceBuffer,
     contentType: "application/pdf"
   },
 ],
@@ -743,7 +696,7 @@ console.log("Requested Status:", status);
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
                 <div style="flex: 1; min-width: 200px;">
                   <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
-                    <strong style="color: #d4af37;">Payment Method:</strong> ${order.paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}
+                    <strong style="color: #d4af37;">Payment Method:</strong> ${order.payment?.method === "cod" ? "Cash on Delivery" : "Online Payment"}
                   </p>
                   <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
                     <strong style="color: #d4af37;">Total Amount:</strong> <span style="color: #d4af37; font-weight: 600;">₹${(order.priceBreakup?.totalAmount || 0).toLocaleString('en-IN')}</span>
@@ -753,8 +706,8 @@ console.log("Requested Status:", status);
                   <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
                     <strong style="color: #d4af37;">Payment Status:</strong>
                   </p>
-                  <div style="display: inline-block; padding: 8px 16px; background-color: ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"}; border-radius: 20px; border: 2px solid ${order.paymentStatus === "Paid" ? "#d4af37" : "#ff6b35"};">
-                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.paymentStatus}</span>
+                  <div style="display: inline-block; padding: 8px 16px; background-color: ${order.payment?.status === "paid" ? "#d4af37" : "#ff6b35"}; border-radius: 20px; border: 2px solid ${order.payment?.status === "paid" ? "#d4af37" : "#ff6b35"};">
+                    <span style="color: #1a1a1a; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">${order.payment?.status || "pending"}</span>
                   </div>
                 </div>
               </div>
@@ -828,10 +781,11 @@ export const downloadInvoice = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // 🔥 generate / reuse invoice
-    const invoicePath = await generateInvoice(order);
-
-    res.download(invoicePath, `invoice-${order._id}.pdf`);
+    const invoiceFile = await getInvoicePayload(order);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${invoiceFile.filename}"`);
+    res.setHeader("Content-Length", invoiceFile.buffer.length);
+    res.send(invoiceFile.buffer);
   } catch (err) {
     console.error("Invoice download error:", err);
     res.status(500).json({ message: "Invoice download failed" });
@@ -1122,7 +1076,7 @@ export const cancelOrder = async (req, res) => {
                     <strong style="color: #d4af37;">Cancellation Date:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </p>
                   <p style="margin: 10px 0; color: #cccccc; font-size: 15px;">
-                    <strong style="color: #d4af37;">Payment Method:</strong> ${order.paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}
+                    <strong style="color: #d4af37;">Payment Method:</strong> ${order.payment?.method === "cod" ? "Cash on Delivery" : "Online Payment"}
                   </p>
                 </div>
               </div>
@@ -1296,3 +1250,4 @@ export const deleteOrder = async (req, res) => {
     });
   }
 };
+

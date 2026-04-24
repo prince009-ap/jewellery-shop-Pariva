@@ -12,6 +12,42 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const isPdfBuffer = (buffer) =>
+  Buffer.isBuffer(buffer) && buffer.slice(0, 4).toString() === "%PDF";
+
+const saveInvoiceBuffer = (order, invoiceBuffer) => {
+  if (!isPdfBuffer(invoiceBuffer)) {
+    throw new Error("Generated invoice is not a valid PDF buffer");
+  }
+
+  const invoiceFilename = `invoice_${order._id}.pdf`;
+  const invoicePath = path.join(process.cwd(), "uploads", "invoices", invoiceFilename);
+  let persistedPath = "";
+
+  try {
+    const invoicesDir = path.dirname(invoicePath);
+    if (!fs.existsSync(invoicesDir)) {
+      fs.mkdirSync(invoicesDir, { recursive: true });
+    }
+
+    fs.writeFileSync(invoicePath, invoiceBuffer);
+    persistedPath = invoicePath;
+  } catch (error) {
+    console.warn("Invoice persistence skipped:", error.message);
+  }
+
+  order.invoice.generated = true;
+  order.invoice.filename = invoiceFilename;
+  order.invoice.path = persistedPath;
+  order.invoice.generatedAt = new Date();
+
+  return {
+    filename: invoiceFilename,
+    path: persistedPath,
+    buffer: invoiceBuffer,
+  };
+};
+
 // Helper function to fetch and validate address
 const fetchAddress = async (addressId) => {
   try {
@@ -29,43 +65,46 @@ const fetchAddress = async (addressId) => {
 // Helper function to generate and save invoice
 const generateAndSaveInvoice = async (order) => {
   try {
-    console.log("📄 Generating invoice for order:", order._id);
-    
-    // Generate invoice PDF
+    console.log("Generating invoice for order:", order._id);
     const invoiceBuffer = await generateInvoice(order);
-    
-    // Create invoice filename
-    const invoiceFilename = `invoice_${order._id}_${Date.now()}.pdf`;
-    const invoicePath = path.join(process.cwd(), "uploads/invoices", invoiceFilename);
-    
-    // Ensure invoices directory exists
-    const invoicesDir = path.dirname(invoicePath);
-    if (!fs.existsSync(invoicesDir)) {
-      fs.mkdirSync(invoicesDir, { recursive: true });
-    }
-    
-    // Save invoice file
-    fs.writeFileSync(invoicePath, invoiceBuffer);
-    
-    // Update order with invoice info
-    order.invoice.generated = true;
-    order.invoice.filename = invoiceFilename;
-    order.invoice.path = invoicePath;
-    order.invoice.generatedAt = new Date();
-    
-    console.log("📄 Invoice saved:", invoicePath);
-    return invoicePath;
+    const savedInvoice = saveInvoiceBuffer(order, invoiceBuffer);
+
+    console.log("Invoice saved:", savedInvoice.path);
+    return savedInvoice;
   } catch (error) {
-    console.error("❌ Invoice generation failed:", error);
+    console.error("Invoice generation failed:", error);
     throw error;
   }
 };
 
 // Helper function to send confirmation email with retry
-const sendConfirmationEmail = async (order, maxRetries = 3) => {
+const sendConfirmationEmail = async (order, invoiceFile = null, maxRetries = 3) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`📧 Sending email (attempt ${attempt}/${maxRetries})...`);
+      console.log(`Sending email (attempt ${attempt}/${maxRetries})...`);
+
+      let attachments = [];
+      if (invoiceFile?.buffer && isPdfBuffer(invoiceFile.buffer)) {
+        attachments = [{
+          filename: invoiceFile.filename || `invoice_${order._id}.pdf`,
+          content: invoiceFile.buffer,
+          contentType: "application/pdf"
+        }];
+      } else if (order.invoice?.path && fs.existsSync(order.invoice.path)) {
+        attachments = [{
+          filename: order.invoice.filename || `invoice_${order._id}.pdf`,
+          path: order.invoice.path
+        }];
+      } else {
+        const regeneratedInvoice = await generateInvoice(order);
+        if (isPdfBuffer(regeneratedInvoice)) {
+          attachments = [{
+            filename: order.invoice?.filename || `invoice_${order._id}.pdf`,
+            content: regeneratedInvoice,
+            contentType: "application/pdf"
+          }];
+        }
+      }
       
       const emailContent = {
         to: order.shippingAddress.email,
@@ -80,7 +119,7 @@ const sendConfirmationEmail = async (order, maxRetries = 3) => {
               <h2>Thank you for your order!</h2>
               <p><strong>Order ID:</strong> ${order._id}</p>
               <p><strong>Order Status:</strong> ${order.orderStatus.toUpperCase()}</p>
-              <p><strong>Total Amount:</strong> ₹${order.priceBreakup.totalAmount}</p>
+              <p><strong>Total Amount:</strong> Rs.${order.priceBreakup.totalAmount}</p>
               
               <h3>Shipping Address:</h3>
               <p>
@@ -89,8 +128,8 @@ const sendConfirmationEmail = async (order, maxRetries = 3) => {
                 ${order.shippingAddress.city}, ${order.shippingAddress.state}<br>
                 ${order.shippingAddress.pincode}<br>
                 ${order.shippingAddress.country}<br>
-                📞 ${order.shippingAddress.phone}<br>
-                📧 ${order.shippingAddress.email}
+                ${order.shippingAddress.phone}<br>
+                ${order.shippingAddress.email}
               </p>
               
               <h3>Order Items:</h3>
@@ -98,45 +137,40 @@ const sendConfirmationEmail = async (order, maxRetries = 3) => {
                 <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                   <strong>${item.name}</strong><br>
                   Quantity: ${item.qty}<br>
-                  Price: ₹${item.price}
+                  Price: Rs.${item.price}
                 </div>
               `).join('')}
               
               <p style="margin-top: 20px; color: #666;">
                 Your order will be delivered within 5-7 working days.<br>
-                You can track your order status in your account.
+                Your invoice PDF is attached with this email.
               </p>
             </div>
             <div style="background: #f5f5f5; padding: 15px; text-align: center; color: #666;">
-              <p>© 2024 PARIVA Jewellery. All rights reserved.</p>
+              <p>PARIVA Jewellery. All rights reserved.</p>
             </div>
           </div>
         `,
-        attachments: order.invoice.generated ? [{
-          filename: order.invoice.filename,
-          path: order.invoice.path
-        }] : []
+        attachments,
       };
       
       await sendMail(emailContent);
       
-      // Update email tracking
       order.email.confirmationSent = true;
       order.email.sentAt = new Date();
       order.email.error = null;
       
-      console.log("📧 Email sent successfully");
+      console.log("Email sent successfully");
       return true;
       
     } catch (error) {
-      console.error(`❌ Email attempt ${attempt} failed:`, error.message);
+      console.error(`Email attempt ${attempt} failed:`, error.message);
       
       if (attempt === maxRetries) {
         order.email.error = error.message;
         throw error;
       }
       
-      // Wait before retry (exponential backoff)
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
   }
@@ -409,9 +443,9 @@ console.log("FINAL SHIPPING OBJECT 👉", {
     console.log("✅ Order saved successfully:", order._id);
 
     // Generate invoice (non-blocking)
-    let invoicePath = null;
+    let invoiceFile = null;
     try {
-      invoicePath = await generateAndSaveInvoice(order);
+      invoiceFile = await generateAndSaveInvoice(order);
       console.log("📄 Invoice generated and saved");
     } catch (invoiceError) {
       console.error("⚠️ Invoice generation failed:", invoiceError.message);
@@ -429,7 +463,7 @@ console.log("FINAL SHIPPING OBJECT 👉", {
 
     // Send confirmation email (non-blocking with retry)
     try {
-      await sendConfirmationEmail(order);
+      await sendConfirmationEmail(order, invoiceFile);
       console.log("📧 Confirmation email sent successfully");
     } catch (emailError) {
       console.error("⚠️ Email sending failed:", emailError.message);
@@ -471,3 +505,4 @@ console.log("FINAL SHIPPING OBJECT 👉", {
     });
   }
 };
+
