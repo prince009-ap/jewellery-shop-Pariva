@@ -2,6 +2,7 @@ import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
+import leafletMarkerIcon from "./leafletMarkerIcon";
 
 function MapController({ position, accuracy }) {
   const map = useMap();
@@ -186,7 +187,7 @@ export default function MapModal({ onClose, onSelect }) {
         <div className="map-modal__map">
           <MapContainer center={position} zoom={16} style={{ height: "400px", width: "100%" }}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <Marker position={position} />
+            <Marker position={position} icon={leafletMarkerIcon} />
             <MapController position={position} accuracy={accuracy} />
           </MapContainer>
         </div>

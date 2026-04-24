@@ -59,10 +59,7 @@ function SelectDropdown({
 
       const rect = shell.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
-      const compactWidth = viewportWidth < 768;
-      const desiredWidth = compactWidth
-        ? Math.min(Math.max(rect.width - 24, 128), 176)
-        : rect.width;
+      const desiredWidth = Math.min(rect.width, viewportWidth - 24);
       const maxLeft = viewportWidth - desiredWidth - 12;
       const left = Math.max(12, Math.min(rect.left, maxLeft));
 
@@ -102,7 +99,10 @@ function SelectDropdown({
     );
 
     if (!exactMatchExists && normalizedQuery) {
-      return [{ label: query, value: query }, ...matches.filter((option) => option.label.toLowerCase() !== normalizedQuery)];
+      return [
+        { label: query, value: query },
+        ...matches.filter((option) => option.label.toLowerCase() !== normalizedQuery),
+      ];
     }
 
     return matches;
@@ -127,7 +127,11 @@ function SelectDropdown({
 
   return (
     <div className={`select-dropdown ${className}`.trim()} ref={rootRef}>
-      <div className={`select-dropdown-shell ${isOpen ? "is-open" : ""} ${disabled ? "is-disabled" : ""}`.trim()}>
+      <div
+        className={`select-dropdown-shell ${isOpen ? "is-open" : ""} ${
+          disabled ? "is-disabled" : ""
+        }`.trim()}
+      >
         {searchable ? (
           <input
             ref={inputRef}
@@ -161,7 +165,11 @@ function SelectDropdown({
             disabled={disabled}
             onClick={() => setIsOpen((prev) => !prev)}
           >
-            {selectedOption ? selectedOption.label : <span className="select-dropdown-placeholder">{placeholder}</span>}
+            {selectedOption ? (
+              selectedOption.label
+            ) : (
+              <span className="select-dropdown-placeholder">{placeholder}</span>
+            )}
           </button>
         )}
 
@@ -175,7 +183,7 @@ function SelectDropdown({
             if (searchable) inputRef.current?.focus();
           }}
         >
-          <span className={`select-dropdown-caret ${isOpen ? "is-open" : ""}`}>▾</span>
+          <span className={`select-dropdown-caret ${isOpen ? "is-open" : ""}`}>v</span>
         </button>
       </div>
 

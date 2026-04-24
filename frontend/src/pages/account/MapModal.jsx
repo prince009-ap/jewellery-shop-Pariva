@@ -1,5 +1,6 @@
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import leafletMarkerIcon from "../../components/address/leafletMarkerIcon";
 
 function LocationMarker({ setLatLng, setAddress }) {
   useMapEvents({
@@ -26,7 +27,7 @@ export default function MapModal({ latLng, setLatLng, setAddress, onClose }) {
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker position={[latLng.lat, latLng.lng]} />
+        <Marker position={[latLng.lat, latLng.lng]} icon={leafletMarkerIcon} />
         <LocationMarker
           setLatLng={setLatLng}
           setAddress={setAddress}

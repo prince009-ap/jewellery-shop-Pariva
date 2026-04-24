@@ -6,6 +6,7 @@ import API from "../../services/api";
 import "../auth.css";
 
 function UserRegister() {
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -134,14 +135,24 @@ function UserRegister() {
 
               <div className="auth-field">
                 <label>Password</label>
-                <input
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Create a secure password"
-                  required
-                />
+                <div className="auth-password-field">
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Create a secure password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
 
               <div className="auth-field">
