@@ -1,15 +1,25 @@
 import PDFDocument from "pdfkit";
 import User from "../models/User.js";
 
+const GOLD = "#d4af37";
+const GOLD_DARK = "#b9911b";
+const GOLD_LIGHT = "#fbf6df";
+const BORDER = "#d8d8d8";
+const TEXT = "#333333";
+const MUTED = "#666666";
+const GREEN = "#39a85a";
+const GREEN_LIGHT = "#eaf7ee";
+
 const formatCurrency = (value) =>
   `Rs.${Number(value || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;
 
 const formatDate = (value) =>
   new Date(value || Date.now()).toLocaleDateString("en-IN", {
     day: "2-digit",
-    month: "long",
+    month: "2-digit",
     year: "numeric",
   });
 
@@ -20,30 +30,6 @@ const safeText = (value, fallback = "-") => {
   if (value === null || value === undefined) return fallback;
   const normalized = String(value).trim();
   return normalized || fallback;
-};
-
-const collectAddressLines = (shippingAddress) => {
-  const address = shippingAddress || {};
-  const street =
-    address.address ||
-    address.addressLine ||
-    [
-      address.house,
-      address.floor,
-      address.area,
-      address.landmark,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-  return [
-    safeText(address.name, "Customer"),
-    safeText(street, ""),
-    [address.city, address.state, address.pincode].filter(Boolean).join(", "),
-    safeText(address.country, "India"),
-    address.phone ? `Phone: ${address.phone}` : "",
-    address.email ? `Email: ${address.email}` : "",
-  ].filter(Boolean);
 };
 
 const resolveCustomerDetails = async (order) => {
@@ -63,24 +49,258 @@ const resolveCustomerDetails = async (order) => {
   };
 };
 
-const drawLabelValue = (doc, label, value) => {
-  doc.font("Helvetica-Bold").text(label, { continued: true });
-  doc.font("Helvetica").text(value);
+const getAddressText = (shippingAddress) => {
+  const address = shippingAddress || {};
+  return (
+    address.address ||
+    address.addressLine ||
+    [address.house, address.floor, address.area, address.landmark]
+      .filter(Boolean)
+      .join(", ") ||
+    "-"
+  );
 };
 
-const drawSectionTitle = (doc, title) => {
-  doc.moveDown(0.6);
-  doc.font("Helvetica-Bold").fontSize(14).fillColor("#b8860b").text(title);
-  doc.moveDown(0.3);
-  doc.strokeColor("#d4af37").lineWidth(1).moveTo(40, doc.y).lineTo(555, doc.y).stroke();
-  doc.moveDown(0.6);
-  doc.fillColor("#111111").fontSize(11);
+const getPaymentMethodLabel = (order) =>
+  order.payment?.method === "razorpay" ? "Online Payment" : "Cash on Delivery";
+
+const getPaymentStatusLabel = (order) =>
+  order.payment?.status === "paid" || order.payment?.method === "razorpay"
+    ? "PAID"
+    : "PENDING";
+
+const getOrderStatusLabel = (order) => safeText(order.orderStatus, "pending").toUpperCase();
+
+const estimateDelivery = (order) =>
+  Math.max(3, Math.min(7, (order.items?.length || 1) + 4));
+
+const drawPageFrame = (doc) => {
+  doc
+    .lineWidth(1)
+    .strokeColor("#2c2c2c")
+    .rect(44, 28, doc.page.width - 88, doc.page.height - 56)
+    .stroke();
+
+  doc
+    .font("Helvetica")
+    .fontSize(6)
+    .fillColor(MUTED)
+    .text("PARIVA Jewellery - Order Invoice", 0, 36, {
+      align: "center",
+      width: doc.page.width,
+    });
+
+  doc
+    .font("Helvetica")
+    .fontSize(6)
+    .fillColor(MUTED)
+    .text("PARIVA Jewellery - Order Invoice", 0, doc.page.height - 26, {
+      align: "center",
+      width: doc.page.width,
+    });
 };
 
-const ensureSpace = (doc, needed = 80) => {
-  if (doc.y + needed > doc.page.height - doc.page.margins.bottom) {
-    doc.addPage();
-  }
+const drawInnerCard = (doc, x, y, width, height) => {
+  doc.roundedRect(x, y, width, height, 6).lineWidth(1).strokeColor("#8a8a8a").stroke();
+};
+
+const drawCenteredHeader = (doc, x, y, width) => {
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(20)
+    .fillColor(GOLD)
+    .text("PARIVA JEWELLERY", x, y, { width, align: "center" });
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(16)
+    .fillColor(TEXT)
+    .text("Order Invoice", x, y + 30, { width, align: "center" });
+
+  doc
+    .lineWidth(2)
+    .strokeColor(GOLD)
+    .moveTo(x + 14, y + 66)
+    .lineTo(x + width - 14, y + 66)
+    .stroke();
+};
+
+const drawInfoBlock = (doc, x, y, width, title, rows) => {
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .fillColor(GOLD_DARK)
+    .text(title, x, y, { width });
+
+  let cursorY = y + 16;
+  rows.forEach(([label, value]) => {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(6.5)
+      .fillColor(MUTED)
+      .text(`${label}:`, x, cursorY, { continued: true });
+    doc.font("Helvetica").fillColor(TEXT).text(` ${safeText(value)}`, {
+      width,
+    });
+    cursorY += 12;
+  });
+
+  return cursorY;
+};
+
+const drawStatusPill = (doc, x, y, label, bgColor, textColor = "#ffffff") => {
+  const pillWidth = Math.max(44, label.length * 5.2 + 16);
+  doc.roundedRect(x, y, pillWidth, 14, 7).fillColor(bgColor).fill();
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(6.5)
+    .fillColor(textColor)
+    .text(label, x, y + 4, { width: pillWidth, align: "center" });
+  return pillWidth;
+};
+
+const drawSectionLabel = (doc, x, y, width, title) => {
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor(GOLD_DARK)
+    .text(title, x, y);
+  doc
+    .lineWidth(1.5)
+    .strokeColor(GOLD)
+    .moveTo(x, y + 14)
+    .lineTo(x + width, y + 14)
+    .stroke();
+};
+
+const drawItemsTable = (doc, x, y, width, items) => {
+  const colWidths = [190, 55, 75, 55, 85];
+  const headers = ["Product Name", "Quantity", "Unit Price", "Metal", "Total"];
+  const headerHeight = 18;
+  const rowHeight = 20;
+
+  doc.rect(x, y, width, headerHeight).fillColor(GOLD).fill();
+  let cursorX = x;
+  headers.forEach((header, index) => {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(6.8)
+      .fillColor("#ffffff")
+      .text(header, cursorX + 6, y + 6, {
+        width: colWidths[index] - 12,
+        align: index === 0 ? "left" : "center",
+      });
+    cursorX += colWidths[index];
+  });
+
+  let currentY = y + headerHeight;
+  items.forEach((item, index) => {
+    const bg = index % 2 === 0 ? "#ffffff" : "#fcfcfc";
+    doc.rect(x, currentY, width, rowHeight).fillColor(bg).fill();
+    doc.rect(x, currentY, width, rowHeight).lineWidth(0.5).strokeColor("#e8e8e8").stroke();
+
+    let itemX = x;
+    [
+      safeText(item?.name, "Jewellery Item"),
+      String(item?.qty || 0),
+      formatCurrency(item?.price || 0),
+      safeText(item?.metal, "Gold"),
+      formatCurrency((item?.price || 0) * (item?.qty || 0)),
+    ].forEach((value, cellIndex) => {
+      doc
+        .font("Helvetica")
+        .fontSize(7)
+        .fillColor(TEXT)
+        .text(value, itemX + 6, currentY + 6, {
+          width: colWidths[cellIndex] - 12,
+          align: cellIndex === 0 ? "left" : "center",
+        });
+      itemX += colWidths[cellIndex];
+    });
+
+    currentY += rowHeight;
+  });
+
+  return currentY;
+};
+
+const drawTotals = (doc, x, y, width, totals) => {
+  const rows = [
+    ["Gold Value:", totals.goldValue],
+    ["Making Charges:", totals.makingCharge],
+    ["Stone Charges:", totals.stoneCharge],
+    ["GST:", totals.gst],
+  ];
+
+  let cursorY = y;
+  rows.forEach(([label, amount]) => {
+    doc.font("Helvetica").fontSize(8).fillColor(TEXT).text(label, x, cursorY);
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor(TEXT)
+      .text(formatCurrency(amount), x, cursorY, { width, align: "right" });
+    cursorY += 17;
+  });
+
+  doc
+    .lineWidth(1.5)
+    .strokeColor(GOLD)
+    .moveTo(x, cursorY + 4)
+    .lineTo(x + width, cursorY + 4)
+    .stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor(GOLD_DARK)
+    .text("Total Amount:", x, cursorY + 12);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor(GOLD_DARK)
+    .text(formatCurrency(totals.totalAmount), x, cursorY + 12, {
+      width,
+      align: "right",
+    });
+
+  return cursorY + 30;
+};
+
+const drawInfoPanel = (doc, x, y, width, title, rows, tone = "gold") => {
+  const bgColor = tone === "green" ? GREEN_LIGHT : GOLD_LIGHT;
+  const titleColor = tone === "green" ? "#2d8f49" : GOLD_DARK;
+  const borderColor = tone === "green" ? "#c7e9d0" : "#f1e0a5";
+  const height = 72;
+
+  doc.roundedRect(x, y, width, height, 4).fillColor(bgColor).fill();
+  doc.roundedRect(x, y, width, height, 4).lineWidth(0.8).strokeColor(borderColor).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .fillColor(titleColor)
+    .text(title, x + 10, y + 8);
+
+  let cursorY = y + 24;
+  rows.forEach((row) => {
+    if (row.type === "status") {
+      doc.font("Helvetica-Bold").fontSize(6.8).fillColor(TEXT).text(`${row.label}:`, x + 10, cursorY);
+      drawStatusPill(doc, x + 80, cursorY - 2, row.value, row.bgColor, row.textColor);
+      cursorY += 15;
+      return;
+    }
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(6.8)
+      .fillColor(TEXT)
+      .text(`${row.label}:`, x + 10, cursorY, { continued: true });
+    doc.font("Helvetica").fillColor(TEXT).text(` ${safeText(row.value)}`, {
+      width: width - 20,
+    });
+    cursorY += 12;
+  });
 };
 
 const generateInvoice = async (order) => {
@@ -92,19 +312,19 @@ const generateInvoice = async (order) => {
   const shippingAddress = order.shippingAddress || {};
   const items = Array.isArray(order.items) ? order.items : [];
   const totals = order.priceBreakup || {};
-  const paymentMethod =
-    order.payment?.method === "razorpay" ? "Online Payment" : "Cash on Delivery";
-  const paymentStatus =
-    order.payment?.status === "paid" || order.payment?.method === "razorpay"
-      ? "Paid"
-      : "Pending";
   const invoiceNumber = buildInvoiceNumber(order);
+  const paymentMethod = getPaymentMethodLabel(order);
+  const paymentStatus = getPaymentStatusLabel(order);
+  const orderStatus = getOrderStatusLabel(order);
+  const trackingId = safeText(order._id);
+  const addressText = getAddressText(shippingAddress);
+  const estimatedDeliveryDays = estimateDelivery(order);
 
   return await new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
         size: "A4",
-        margin: 40,
+        margin: 0,
         info: {
           Title: `Invoice ${invoiceNumber}`,
           Author: "PARIVA Jewellery",
@@ -116,117 +336,112 @@ const generateInvoice = async (order) => {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      doc.rect(0, 0, doc.page.width, 105).fill("#111111");
+      drawPageFrame(doc);
+
+      const cardX = 84;
+      const cardY = 70;
+      const cardWidth = 430;
+      const cardHeight = 705;
+
+      drawInnerCard(doc, cardX, cardY, cardWidth, cardHeight);
+      drawCenteredHeader(doc, cardX + 20, cardY + 18, cardWidth - 40);
+
+      const infoY = cardY + 92;
+      const infoX = cardX + 16;
+      const infoWidth = cardWidth - 32;
+      const colWidth = 120;
+
       doc
-        .fillColor("#d4af37")
-        .font("Helvetica-Bold")
-        .fontSize(24)
-        .text("PARIVA JEWELLERY", 40, 30);
-      doc
-        .font("Helvetica")
-        .fontSize(11)
-        .fillColor("#ffffff")
-        .text("Order Invoice", 40, 62);
-      doc
-        .font("Helvetica")
-        .fontSize(10)
-        .fillColor("#ffffff")
-        .text(`Generated: ${formatDate(new Date())}`, 400, 36, { align: "right" });
+        .roundedRect(infoX, infoY, infoWidth, 96, 3)
+        .fillColor("#fbfbfb")
+        .fill();
+      doc.roundedRect(infoX, infoY, infoWidth, 96, 3).lineWidth(0.7).strokeColor("#ececec").stroke();
 
-      doc.y = 125;
-      drawSectionTitle(doc, "Invoice Details");
-      drawLabelValue(doc, "Invoice Number: ", invoiceNumber);
-      drawLabelValue(doc, "Order ID: ", safeText(order._id));
-      drawLabelValue(doc, "Order Date: ", formatDate(order.createdAt));
-      drawLabelValue(doc, "Order Status: ", safeText(order.orderStatus, "pending").toUpperCase());
-      drawLabelValue(doc, "Payment Method: ", paymentMethod);
-      drawLabelValue(doc, "Payment Status: ", paymentStatus);
+      drawInfoBlock(doc, infoX + 10, infoY + 9, colWidth, "Invoice Details", [
+        ["Invoice #", invoiceNumber],
+        ["Order ID", safeText(order._id)],
+        ["Date", formatDate(order.createdAt)],
+      ]);
+      drawStatusPill(doc, infoX + 10, infoY + 64, orderStatus, GREEN);
 
-      drawSectionTitle(doc, "Customer Details");
-      drawLabelValue(doc, "Name: ", safeText(customer.name));
-      drawLabelValue(doc, "Email: ", safeText(customer.email));
-      drawLabelValue(doc, "Phone: ", safeText(customer.phone));
+      drawInfoBlock(doc, infoX + 144, infoY + 9, colWidth, "Customer Information", [
+        ["Name", customer.name],
+        ["Email", customer.email],
+        ["Phone", customer.phone],
+      ]);
 
-      drawSectionTitle(doc, "Shipping Address");
-      collectAddressLines(shippingAddress).forEach((line) => {
-        doc.font("Helvetica").text(line);
-      });
+      drawInfoBlock(doc, infoX + 278, infoY + 9, colWidth, "Delivery Address", [
+        ["Type", shippingAddress.name || customer.name],
+        ["Address", addressText],
+        ["Phone", shippingAddress.phone || customer.phone],
+      ]);
 
-      drawSectionTitle(doc, "Order Items");
-      const tableTop = doc.y;
-      const columns = [40, 250, 320, 395, 475];
-      doc
-        .rect(40, tableTop, 515, 22)
-        .fill("#f4e7b0");
-      doc
-        .fillColor("#111111")
-        .font("Helvetica-Bold")
-        .fontSize(10)
-        .text("Product", columns[0] + 6, tableTop + 7)
-        .text("Qty", columns[1] + 6, tableTop + 7)
-        .text("Rate", columns[2] + 6, tableTop + 7)
-        .text("Metal", columns[3] + 6, tableTop + 7)
-        .text("Total", columns[4] + 6, tableTop + 7);
+      const itemsSectionY = infoY + 118;
+      drawSectionLabel(doc, infoX, itemsSectionY, infoWidth, "Order Items");
+      const tableEndY = drawItemsTable(doc, infoX, itemsSectionY + 24, infoWidth, items);
 
-      let rowY = tableTop + 22;
-      items.forEach((item, index) => {
-        ensureSpace(doc, 32);
-        const rowHeight = 24;
-        if (index % 2 === 0) {
-          doc.rect(40, rowY, 515, rowHeight).fill("#faf7ef");
-        }
-        doc
-          .fillColor("#111111")
-          .font("Helvetica")
-          .fontSize(10)
-          .text(safeText(item?.name, "Jewellery Item"), columns[0] + 6, rowY + 7, {
-            width: columns[1] - columns[0] - 12,
-          })
-          .text(String(item?.qty || 0), columns[1] + 6, rowY + 7)
-          .text(formatCurrency(item?.price || 0), columns[2] + 6, rowY + 7)
-          .text(safeText(item?.metal, "-"), columns[3] + 6, rowY + 7)
-          .text(formatCurrency((item?.price || 0) * (item?.qty || 0)), columns[4] + 6, rowY + 7);
-        rowY += rowHeight;
-        doc.y = rowY;
-      });
+      const totalsEndY = drawTotals(doc, infoX + 8, tableEndY + 18, infoWidth - 16, totals);
 
-      ensureSpace(doc, 130);
-      doc.moveDown(0.8);
-      drawSectionTitle(doc, "Price Summary");
-      const summaryRows = [
-        ["Gold Value", totals.goldValue],
-        ["Making Charge", totals.makingCharge],
-        ["Stone Charge", totals.stoneCharge],
-        ["GST", totals.gst],
-        ["Total Amount", totals.totalAmount],
-      ];
+      const orderInfoY = totalsEndY + 18;
+      drawInfoPanel(
+        doc,
+        infoX,
+        orderInfoY,
+        infoWidth,
+        "Order Information",
+        [
+          { label: "Estimated Delivery", value: `${estimatedDeliveryDays}-${estimatedDeliveryDays + 2} business days` },
+          { label: "Payment Method", value: paymentMethod },
+          { type: "status", label: "Payment Status", value: paymentStatus, bgColor: GOLD, textColor: "#ffffff" },
+          { type: "status", label: "Order Status", value: orderStatus, bgColor: GREEN, textColor: "#ffffff" },
+        ],
+        "gold"
+      );
 
-      summaryRows.forEach(([label, amount], index) => {
-        const isTotal = index === summaryRows.length - 1;
-        doc
-          .font(isTotal ? "Helvetica-Bold" : "Helvetica")
-          .fontSize(isTotal ? 12 : 11)
-          .text(label, 300, doc.y, { continued: true })
-          .text(formatCurrency(amount), { align: "right" });
-        doc.moveDown(0.3);
-      });
+      const trackingY = orderInfoY + 92;
+      drawInfoPanel(
+        doc,
+        infoX,
+        trackingY,
+        infoWidth,
+        "Order Tracking",
+        [
+          { label: "Tracking ID", value: trackingId },
+          { label: "Info", value: "Use this tracking ID on our website or mobile app." },
+          { label: "Customer Support", value: "senjaliyaprince009@gmail.com | +91 97149 07350" },
+        ],
+        "green"
+      );
 
-      ensureSpace(doc, 90);
-      drawSectionTitle(doc, "Support");
       doc
         .font("Helvetica")
-        .fontSize(10)
-        .text("For invoice or order help, contact PARIVA Jewellery.")
-        .text("Email: senjaliyaprince009@gmail.com")
-        .text("Phone: +91 97149 07350");
-
-      doc
-        .font("Helvetica-Oblique")
-        .fontSize(9)
-        .fillColor("#666666")
-        .text("This is a system-generated invoice and does not require a signature.", 40, 780, {
+        .fontSize(6)
+        .fillColor(MUTED)
+        .text("© 2024 PARIVA Jewellery. All rights reserved.", cardX + 40, cardY + 664, {
+          width: cardWidth - 80,
           align: "center",
-          width: 515,
+        });
+      doc
+        .text("Thank you for choosing PARIVA Jewellery for your fine jewellery needs!", cardX + 40, cardY + 674, {
+          width: cardWidth - 80,
+          align: "center",
+        })
+        .text("This is an automated invoice. Please keep it for your records.", cardX + 40, cardY + 684, {
+          width: cardWidth - 80,
+          align: "center",
+        })
+        .text(`Generated on: ${new Date().toLocaleString("en-IN")}`, cardX + 40, cardY + 694, {
+          width: cardWidth - 80,
+          align: "center",
+        });
+
+      doc
+        .font("Helvetica")
+        .fontSize(5.5)
+        .fillColor(MUTED)
+        .text("Page 1 of 1", 0, doc.page.height - 38, {
+          align: "center",
+          width: doc.page.width,
         });
 
       doc.end();
