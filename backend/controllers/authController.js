@@ -13,6 +13,8 @@ const generateToken = (id, role = "user") => {
   );
 };
 
+const LOGIN_OTP_MAIL_TIMEOUT_MS = 8000;
+
 export const register = async (req, res) => {
   try {
     const { name, email, password, mobile, dob, gender } = req.body;
@@ -329,7 +331,7 @@ export const loginWithPasswordAndOtp = async (req, res) => {
   user.otpExpire = Date.now() + 5 * 60 * 1000;
   await user.save({ validateBeforeSave: false });
 
-  await sendMail({
+  const otpMailPayload = {
     to: user.email,
     subject: "Your Login OTP - PARIVA Jewellery",
     html: `
@@ -406,9 +408,41 @@ export const loginWithPasswordAndOtp = async (req, res) => {
       </body>
       </html>
     `
-  });
+  };
 
-    res.json({ message: "OTP sent to email" });
+  try {
+    await Promise.race([
+      sendMail(otpMailPayload),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("OTP email timeout")),
+          LOGIN_OTP_MAIL_TIMEOUT_MS
+        )
+      ),
+    ]);
+
+    res.json({ message: "OTP sent to email", otpRequired: true });
+  } catch (mailError) {
+    console.error("OTP email failed, falling back to password-only login:", mailError);
+
+    user.loginOtp = undefined;
+    user.otpExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    const token = generateToken(user._id, user.role);
+
+    res.json({
+      message: "Email verification is temporarily unavailable. Logged in with password only.",
+      otpRequired: false,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  }
   } catch (error) {
     console.error("Login with password & OTP error:", error);
     res.status(500).json({

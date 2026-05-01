@@ -48,7 +48,7 @@ function UserRegister() {
         gender: form.gender,
       };
 
-      await API.post("/auth/register", payload, { skipLoader: true });
+      await API.post("/auth/register", payload, { skipLoader: true, timeout: 45000 });
       navigate("/login", { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Registration failed");

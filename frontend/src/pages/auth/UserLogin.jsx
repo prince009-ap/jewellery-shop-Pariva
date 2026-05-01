@@ -28,14 +28,21 @@ function UserLogin() {
 
     try {
       setLoading(true);
-      await API.post(
+      const res = await API.post(
         "/auth/login-password-otp",
         {
           email: email.trim().toLowerCase(),
           password: password.trim(),
         },
-        { skipLoader: true }
+        { skipLoader: true, timeout: 45000 }
       );
+
+      if (res.data?.token && res.data?.user) {
+        await login(res.data.user, res.data.token);
+        navigate("/home", { replace: true });
+        return;
+      }
+
       setStep(2);
     } catch (err) {
       console.error("Password verification error:", err);
@@ -62,7 +69,7 @@ function UserLogin() {
           email: email.trim().toLowerCase(),
           otp: otp.trim(),
         },
-        { skipLoader: true }
+        { skipLoader: true, timeout: 45000 }
       );
 
       if (res.data.token && res.data.user) {
