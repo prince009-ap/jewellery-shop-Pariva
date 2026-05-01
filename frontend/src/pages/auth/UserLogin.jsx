@@ -28,14 +28,18 @@ function UserLogin() {
 
     try {
       setLoading(true);
-      await API.post("/auth/login-password-otp", {
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
-      });
+      await API.post(
+        "/auth/login-password-otp",
+        {
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+        },
+        { skipLoader: true }
+      );
       setStep(2);
     } catch (err) {
       console.error("Password verification error:", err);
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.message || err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -52,10 +56,14 @@ function UserLogin() {
 
     try {
       setLoading(true);
-      const res = await API.post("/auth/verify-login-otp", {
-        email: email.trim().toLowerCase(),
-        otp: otp.trim(),
-      });
+      const res = await API.post(
+        "/auth/verify-login-otp",
+        {
+          email: email.trim().toLowerCase(),
+          otp: otp.trim(),
+        },
+        { skipLoader: true }
+      );
 
       if (res.data.token && res.data.user) {
         await login(res.data.user, res.data.token);
@@ -67,6 +75,7 @@ function UserLogin() {
       const errorMessage =
         err.response?.data?.message ||
         err.response?.data?.error ||
+        err.message ||
         "Invalid OTP. Please try again.";
       setError(errorMessage);
     } finally {

@@ -7,6 +7,7 @@ import "../auth.css";
 
 function UserRegister() {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -34,7 +35,10 @@ function UserRegister() {
       return;
     }
 
+    if (loading) return;
+
     try {
+      setLoading(true);
       const payload = {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
@@ -44,10 +48,12 @@ function UserRegister() {
         gender: form.gender,
       };
 
-      await API.post("/auth/register", payload);
+      await API.post("/auth/register", payload, { skipLoader: true });
       navigate("/login", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      setError(err.response?.data?.message || err.message || "Registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,6 +109,7 @@ function UserRegister() {
                   name="name"
                   value={form.name}
                   onChange={handleChange}
+                  disabled={loading}
                   placeholder="Enter your full name"
                   required
                 />
@@ -115,6 +122,7 @@ function UserRegister() {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
+                  disabled={loading}
                   placeholder="you@example.com"
                   required
                 />
@@ -128,6 +136,7 @@ function UserRegister() {
                   placeholder="10-digit mobile number"
                   value={form.mobile}
                   onChange={handleChange}
+                  disabled={loading}
                   pattern="[0-9]{10}"
                   required
                 />
@@ -141,6 +150,7 @@ function UserRegister() {
                     type={showPassword ? "text" : "password"}
                     value={form.password}
                     onChange={handleChange}
+                    disabled={loading}
                     placeholder="Create a secure password"
                     required
                   />
@@ -149,6 +159,7 @@ function UserRegister() {
                     className="auth-password-toggle"
                     onClick={() => setShowPassword((current) => !current)}
                     aria-label={showPassword ? "Hide password" : "Show password"}
+                    disabled={loading}
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
@@ -179,7 +190,13 @@ function UserRegister() {
             {error && <div className="auth-error">{error}</div>}
 
             <div className="auth-actions">
-              <button className="auth-button" type="submit">Create Account</button>
+              <button
+                className={`auth-button ${loading ? "button-loading" : ""}`}
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? "Creating Account..." : "Create Account"}
+              </button>
             </div>
           </form>
 
