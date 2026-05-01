@@ -120,7 +120,7 @@ export const forgotPassword = async (req, res) => {
       .digest("hex");
 
     user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     const resetUrl = buildClientUrl(`/reset-password/${resetToken}`);
 
@@ -211,7 +211,7 @@ export const resetPassword = async (req, res) => {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
 
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     res.json({ message: "Password reset successful" });
   } catch (error) {
@@ -239,7 +239,7 @@ export const updateProfile = async (req, res) => {
     if (dob) user.dob = new Date(dob);
     if (gender) user.gender = gender;
 
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     res.json({
       message: "Profile updated successfully",
@@ -327,7 +327,7 @@ export const loginWithPasswordAndOtp = async (req, res) => {
 
   user.loginOtp = crypto.createHash("sha256").update(otp).digest("hex");
   user.otpExpire = Date.now() + 5 * 60 * 1000;
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   await sendMail({
     to: user.email,
@@ -464,7 +464,7 @@ export const verifyLoginOtp = async (req, res) => {
     // Clear OTP fields
     user.loginOtp = undefined;
     user.otpExpire = undefined;
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     // Generate token
     const token = generateToken(user._id, user.role);
