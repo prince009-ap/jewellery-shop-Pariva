@@ -13,8 +13,6 @@ const generateToken = (id, role = "user") => {
   );
 };
 
-const LOGIN_OTP_MAIL_TIMEOUT_MS = 8000;
-
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const findUserByEmail = async (email) => {
@@ -426,15 +424,7 @@ export const loginWithPasswordAndOtp = async (req, res) => {
   };
 
   try {
-    await Promise.race([
-      sendMail(otpMailPayload),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("OTP email timeout")),
-          LOGIN_OTP_MAIL_TIMEOUT_MS
-        )
-      ),
-    ]);
+    await sendMail(otpMailPayload);
 
     res.json({ message: "OTP sent to email", otpRequired: true });
   } catch (mailError) {

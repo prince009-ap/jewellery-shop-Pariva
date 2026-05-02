@@ -5,8 +5,6 @@ import jwt from "jsonwebtoken";
 import { sendMail } from "../utils/sendMail.js";
 import { buildClientUrl } from "../utils/appUrl.js";
 
-const ADMIN_LOGIN_OTP_MAIL_TIMEOUT_MS = 8000;
-
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const findAdminByEmail = async (email) => {
@@ -88,12 +86,7 @@ export const adminLoginWithOtp = async (req, res) => {
     };
 
     try {
-      await Promise.race([
-        sendMail(otpMailPayload),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Admin OTP email timeout")), ADMIN_LOGIN_OTP_MAIL_TIMEOUT_MS)
-        ),
-      ]);
+      await sendMail(otpMailPayload);
 
       return res.json({ message: "OTP sent to email", otpRequired: true });
     } catch (mailError) {
