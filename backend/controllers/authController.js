@@ -14,6 +14,7 @@ const generateToken = (id, role = "user") => {
 };
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const OTP_SEND_TIMEOUT_MS = 10000;
 
 const findUserByEmail = async (email) => {
   const normalizedEmail = String(email || "").trim().toLowerCase();
@@ -424,19 +425,22 @@ export const loginWithPasswordAndOtp = async (req, res) => {
   };
 
   try {
-    await sendMail(otpMailPayload);
+    await Promise.race([
+      sendMail(otpMailPayload),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("OTP email timeout")), OTP_SEND_TIMEOUT_MS)
+      ),
+    ]);
 
-    res.json({ message: "OTP sent to email", otpRequired: true });
+    res.json({ message: "OTP sent to email", otpRequired: true, deliveryMode: "email" });
   } catch (mailError) {
-    console.error("OTP email failed:", mailError);
+    console.error("OTP email failed, using demo OTP delivery:", mailError);
 
-    user.loginOtp = undefined;
-    user.otpExpire = undefined;
-    await user.save({ validateBeforeSave: false });
-
-    return res.status(503).json({
-      message: "OTP email could not be sent. Please check email settings and try again.",
-      error: process.env.NODE_ENV === "development" ? mailError.message : undefined,
+    return res.status(200).json({
+      message: "Email service is slow right now. Use the demo OTP shown below to continue login.",
+      otpRequired: true,
+      deliveryMode: "demo",
+      demoOtp: otp,
     });
   }
   } catch (error) {
