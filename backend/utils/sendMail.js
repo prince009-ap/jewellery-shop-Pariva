@@ -1,7 +1,6 @@
 import nodemailer from "nodemailer";
 
-let cachedTransporter;
-let cachedTransportKey;
+let transporterPromise;
 
 const normalizeEnvValue = (value = "") => String(value).trim();
 const normalizePassword = (value = "") => String(value).replace(/\s+/g, "");
@@ -32,125 +31,70 @@ const getMailEnv = () => {
   return {
     emailUser,
     emailPass,
+    smtpService: normalizeEnvValue(process.env.SMTP_SERVICE) || "gmail",
     smtpHost: normalizeEnvValue(process.env.SMTP_HOST),
     smtpPort: normalizePort(process.env.SMTP_PORT, 587),
     smtpSecure: normalizeBoolean(process.env.SMTP_SECURE, false),
-    smtpService: normalizeEnvValue(process.env.SMTP_SERVICE),
   };
 };
 
-const buildTransportConfigs = () => {
-  const { emailUser, emailPass, smtpHost, smtpPort, smtpSecure, smtpService } = getMailEnv();
-  const sharedAuth = {
-    user: emailUser,
-    pass: emailPass,
-  };
-  const baseTimeouts = {
+const createTransporter = async () => {
+  const { emailUser, emailPass, smtpService, smtpHost, smtpPort, smtpSecure } = getMailEnv();
+  const configKey = `${smtpService}:${smtpHost || "default-host"}:${smtpPort}:${smtpSecure}`;
+
+  console.log(`[mail] Trying config: ${configKey}`);
+
+  const transporter = nodemailer.createTransport({
+    service: smtpService,
+    ...(smtpHost ? { host: smtpHost } : {}),
+    port: smtpPort,
+    secure: smtpSecure,
+    requireTLS: !smtpSecure,
+    auth: {
+      user: emailUser,
+      pass: emailPass,
+    },
     connectionTimeout: 20000,
     greetingTimeout: 20000,
     socketTimeout: 30000,
-  };
+  });
 
-  const configs = [];
+  return transporter;
+};
 
-  if (smtpHost || smtpService) {
-    configs.push({
-      key: `custom:${smtpService || smtpHost}:${smtpPort}:${smtpSecure}`,
-      options: {
-        ...(smtpService ? { service: smtpService } : {}),
-        ...(smtpHost ? { host: smtpHost } : {}),
-        port: smtpPort,
-        secure: smtpSecure,
-        requireTLS: !smtpSecure,
-        auth: sharedAuth,
-        ...baseTimeouts,
-      },
+const getTransporter = async () => {
+  if (!transporterPromise) {
+    transporterPromise = createTransporter().catch((error) => {
+      transporterPromise = undefined;
+      throw error;
     });
   }
 
-  configs.push(
-    {
-      key: "gmail:587:false",
-      options: {
-        service: "gmail",
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        requireTLS: true,
-        auth: sharedAuth,
-        ...baseTimeouts,
-      },
-    },
-    {
-      key: "gmail:465:true",
-      options: {
-        service: "gmail",
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        requireTLS: true,
-        auth: sharedAuth,
-        ...baseTimeouts,
-      },
-    }
-  );
-
-  return { emailUser, configs };
-};
-
-const buildAttemptList = (configs) => {
-  if (!cachedTransportKey) return configs;
-
-  const preferred = configs.find((config) => config.key === cachedTransportKey);
-  const remaining = configs.filter((config) => config.key !== cachedTransportKey);
-  return preferred ? [preferred, ...remaining] : configs;
-};
-
-const getTransporterForConfig = (config) => {
-  if (cachedTransporter && cachedTransportKey === config.key) {
-    return cachedTransporter;
-  }
-
-  return nodemailer.createTransport(config.options);
+  return transporterPromise;
 };
 
 export const sendMail = async ({ to, subject, text, html, attachments }) => {
   const normalizedTo = normalizeRecipient(to);
-  const { emailUser, configs } = buildTransportConfigs();
+  const { emailUser } = getMailEnv();
+  const transporter = await getTransporter();
 
   if (!normalizedTo) {
     throw new Error("Recipient email address is missing.");
   }
 
-  const attempts = [];
-
-  for (const config of buildAttemptList(configs)) {
-    const transporter = getTransporterForConfig(config);
-
-    try {
-      await transporter.sendMail({
-        from: `"PARIVA Jewellery" <${emailUser}>`,
-        to: normalizedTo,
-        subject,
-        text,
-        html,
-        attachments,
-      });
-
-      cachedTransporter = transporter;
-      cachedTransportKey = config.key;
-      return;
-    } catch (error) {
-      if (cachedTransportKey === config.key) {
-        cachedTransporter = undefined;
-        cachedTransportKey = undefined;
-      }
-
-      attempts.push(
-        `${config.key} -> ${error?.response || error?.code || error?.message || "Unknown error"}`
-      );
-    }
+  try {
+    await transporter.sendMail({
+      from: `"PARIVA Jewellery" <${emailUser}>`,
+      to: normalizedTo,
+      subject,
+      text,
+      html,
+      attachments,
+    });
+  } catch (error) {
+    transporterPromise = undefined;
+    throw new Error(
+      `Mail send failed: ${error?.response || error?.code || error?.message || "Unknown error"}`
+    );
   }
-
-  throw new Error(`Mail send failed: ${attempts.join(" | ")}`);
 };
