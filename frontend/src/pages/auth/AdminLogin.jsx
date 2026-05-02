@@ -34,10 +34,14 @@ function AdminLogin() {
     try {
       setLoading(true);
       const normalizedEmail = email.trim().toLowerCase();
-      const res = await API.post("/admin/login", {
-        email: normalizedEmail,
-        password: password.trim(),
-      });
+      const res = await API.post(
+        "/admin/login",
+        {
+          email: normalizedEmail,
+          password: password.trim(),
+        },
+        { skipLoader: true, timeout: 45000 }
+      );
 
       if (res.data?.token && res.data?.admin) {
         sessionStorage.setItem("adminToken", res.data.token);
@@ -50,7 +54,7 @@ function AdminLogin() {
       setDemoOtp(res.data?.deliveryMode === "demo" ? String(res.data?.demoOtp || "") : "");
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.message || err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -63,16 +67,20 @@ function AdminLogin() {
 
     try {
       setLoading(true);
-      const res = await API.post("/admin/verify-otp", {
-        email: email.trim().toLowerCase(),
-        emailOtp: emailOtp.trim(),
-      });
+      const res = await API.post(
+        "/admin/verify-otp",
+        {
+          email: email.trim().toLowerCase(),
+          emailOtp: emailOtp.trim(),
+        },
+        { skipLoader: true, timeout: 45000 }
+      );
 
       sessionStorage.setItem("adminToken", res.data.token);
       setAdmin(res.data.admin);
       navigate("/admin/dashboard", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "OTP verification failed");
+      setError(err.response?.data?.message || err.message || "OTP verification failed");
     } finally {
       setLoading(false);
     }
