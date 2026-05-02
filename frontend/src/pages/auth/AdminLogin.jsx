@@ -13,6 +13,8 @@ function AdminLogin() {
   const [emailOtp, setEmailOtp] = useState("");
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [demoOtp, setDemoOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -25,6 +27,8 @@ function AdminLogin() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setInfo("");
+    setDemoOtp("");
     if (loading) return;
 
     try {
@@ -42,6 +46,8 @@ function AdminLogin() {
         return;
       }
 
+      setInfo(res.data?.message || "");
+      setDemoOtp(res.data?.deliveryMode === "demo" ? String(res.data?.demoOtp || "") : "");
       setStep(2);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
@@ -116,7 +122,9 @@ function AdminLogin() {
             <p>
               {step === 1
                 ? "Use your admin email and password to start the secure verification flow."
-                : "Complete the email OTP step to unlock the admin dashboard session."}
+                : demoOtp
+                  ? "Email service is unavailable right now. Use the OTP shown below to unlock the admin dashboard session."
+                  : "Complete the email OTP step to unlock the admin dashboard session."}
             </p>
           </div>
 
@@ -177,6 +185,12 @@ function AdminLogin() {
 
           {step === 2 && (
             <form className="auth-form" onSubmit={handleOtpSubmit}>
+              {info && <div className="auth-message">{info}</div>}
+              {demoOtp && (
+                <div className="auth-message">
+                  Demo OTP: <strong>{demoOtp}</strong>
+                </div>
+              )}
               <div className="auth-field">
                 <label>Email OTP</label>
                 <input
@@ -213,6 +227,8 @@ function AdminLogin() {
                     setStep(1);
                     setEmailOtp("");
                     setError("");
+                    setInfo("");
+                    setDemoOtp("");
                   }}
                   disabled={loading}
                 >
