@@ -2,6 +2,13 @@ import nodemailer from "nodemailer";
 
 let transporterPromise;
 
+const normalizeRecipient = (value = "") =>
+  String(value)
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean)
+    .join(", ");
+
 const createTransporter = async () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS.");
@@ -40,11 +47,16 @@ const getTransporter = async () => {
 
 export const sendMail = async ({ to, subject, text, html, attachments }) => {
   const transporter = await getTransporter();
+  const normalizedTo = normalizeRecipient(to);
+
+  if (!normalizedTo) {
+    throw new Error("Recipient email address is missing.");
+  }
 
   try {
     await transporter.sendMail({
       from: `"PARIVA Jewellery" <${process.env.EMAIL_USER}>`,
-      to,
+      to: normalizedTo,
       subject,
       text,
       html,

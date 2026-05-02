@@ -37,6 +37,7 @@ export const adminLoginWithOtp = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid password" });
     }
+    const recipientEmail = String(admin.email || "").trim().toLowerCase();
 
     const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -45,7 +46,7 @@ export const adminLoginWithOtp = async (req, res) => {
     await admin.save({ validateBeforeSave: false });
 
     const otpMailPayload = {
-      to: admin.email,
+      to: recipientEmail,
       subject: "Admin Login OTP - PARIVA Jewellery",
       html: `
         <!DOCTYPE html>
@@ -150,7 +151,7 @@ export const verifyAdminOtp = async (req, res) => {
     const adminDashboardUrl = buildClientUrl("/admin/dashboard");
 
     await sendMail({
-      to: admin.email,
+      to: String(admin.email || "").trim().toLowerCase(),
       subject: "Admin Login Successful - PARIVA Jewellery",
       html: `
         <!DOCTYPE html>

@@ -141,7 +141,7 @@ export const forgotPassword = async (req, res) => {
     const resetUrl = buildClientUrl(`/reset-password/${resetToken}`);
 
     await sendMail({
-      to: user.email,
+      to: String(user.email || "").trim().toLowerCase(),
       subject: "Reset Your Password - PARIVA Jewellery",
       html: `
         <!DOCTYPE html>
@@ -330,6 +330,7 @@ export const loginWithPasswordAndOtp = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    const recipientEmail = String(user.email || "").trim().toLowerCase();
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -344,7 +345,7 @@ export const loginWithPasswordAndOtp = async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   const otpMailPayload = {
-    to: user.email,
+    to: recipientEmail,
     subject: "Your Login OTP - PARIVA Jewellery",
     html: `
       <!DOCTYPE html>
@@ -523,7 +524,7 @@ export const verifyLoginOtp = async (req, res) => {
 
     // Send confirmation email (fire and forget, don't block response)
     sendMail({
-      to: matchedUser.email,
+      to: String(matchedUser.email || "").trim().toLowerCase(),
       subject: "Login Successful - PARIVA Jewellery",
       html: `
         <!DOCTYPE html>
