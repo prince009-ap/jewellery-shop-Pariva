@@ -431,15 +431,13 @@ export const loginWithPasswordAndOtp = async (req, res) => {
       otpRequired: true,
     });
   } catch (mailError) {
-    console.error("OTP email failed:", mailError);
+    console.error("OTP email failed, using demo OTP delivery:", mailError);
 
-    user.loginOtp = undefined;
-    user.otpExpire = undefined;
-    await user.save({ validateBeforeSave: false });
-
-    return res.status(503).json({
-      message: "OTP email could not be sent. Please check email settings and try again.",
-      error: process.env.NODE_ENV === "development" ? mailError.message : undefined,
+    return res.status(200).json({
+      message: "Email service is unavailable right now. Use the OTP shown below to continue login.",
+      otpRequired: true,
+      deliveryMode: "demo",
+      demoOtp: otp,
     });
   }
   } catch (error) {
