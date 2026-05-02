@@ -13,7 +13,6 @@ function AdminLogin() {
   const [emailOtp, setEmailOtp] = useState("");
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
-  const [infoMessage, setInfoMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,7 +25,6 @@ function AdminLogin() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setInfoMessage("");
     if (loading) return;
 
     try {
@@ -44,12 +42,6 @@ function AdminLogin() {
         return;
       }
 
-      if (res.data?.deliveryMode === "demo" && res.data?.demoOtp) {
-        setInfoMessage(`${res.data.message} Demo OTP: ${res.data.demoOtp}`);
-      } else if (res.data?.message) {
-        setInfoMessage(res.data.message);
-      }
-
       setStep(2);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
@@ -61,7 +53,6 @@ function AdminLogin() {
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setInfoMessage("");
     if (loading) return;
 
     try {
@@ -141,8 +132,6 @@ function AdminLogin() {
           </div>
 
           {error && <div className="auth-error">{error}</div>}
-          {infoMessage && <div className="auth-message">{infoMessage}</div>}
-
           {step === 1 && (
             <form className="auth-form" onSubmit={handlePasswordSubmit}>
               <div className="auth-field">

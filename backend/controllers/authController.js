@@ -14,8 +14,6 @@ const generateToken = (id, role = "user") => {
 };
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const OTP_SEND_TIMEOUT_MS = 10000;
-
 const findUserByEmail = async (email) => {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   if (!normalizedEmail) return null;
@@ -425,22 +423,19 @@ export const loginWithPasswordAndOtp = async (req, res) => {
   };
 
   try {
-    await Promise.race([
-      sendMail(otpMailPayload),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("OTP email timeout")), OTP_SEND_TIMEOUT_MS)
-      ),
-    ]);
+    await sendMail(otpMailPayload);
 
-    res.json({ message: "OTP sent to email", otpRequired: true, deliveryMode: "email" });
+    res.json({ message: "OTP sent to email", otpRequired: true });
   } catch (mailError) {
-    console.error("OTP email failed, using demo OTP delivery:", mailError);
+    console.error("OTP email failed:", mailError);
 
-    return res.status(200).json({
-      message: "Email service is slow right now. Use the demo OTP shown below to continue login.",
-      otpRequired: true,
-      deliveryMode: "demo",
-      demoOtp: otp,
+    user.loginOtp = undefined;
+    user.otpExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(503).json({
+      message: "OTP email could not be sent. Please check email settings and try again.",
+      error: process.env.NODE_ENV === "development" ? mailError.message : undefined,
     });
   }
   } catch (error) {
@@ -528,7 +523,7 @@ export const verifyLoginOtp = async (req, res) => {
 
     // Send confirmation email (fire and forget, don't block response)
     sendMail({
-      to: user.email,
+      to: matchedUser.email,
       subject: "Login Successful - PARIVA Jewellery",
       html: `
         <!DOCTYPE html>
