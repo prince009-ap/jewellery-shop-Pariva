@@ -6,7 +6,6 @@ import { sendMail } from "../utils/sendMail.js";
 import { buildClientUrl } from "../utils/appUrl.js";
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const OTP_SEND_TIMEOUT_MS = 10000;
 const findAdminByEmail = async (email) => {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   if (!normalizedEmail) return null;
@@ -87,26 +86,22 @@ export const adminLoginWithOtp = async (req, res) => {
     };
 
     try {
-      await Promise.race([
-        sendMail(otpMailPayload),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Admin OTP email timeout")), OTP_SEND_TIMEOUT_MS)
-        ),
-      ]);
+      await sendMail(otpMailPayload);
 
       return res.json({
         message: "OTP sent to email",
         otpRequired: true,
-        deliveryMode: "email",
       });
     } catch (mailError) {
-      console.error("Admin OTP email failed, using demo OTP delivery:", mailError);
+      console.error("Admin OTP email failed:", mailError);
 
-      return res.status(200).json({
-        message: "Admin email service is unavailable right now. Use the OTP shown below to continue login.",
-        otpRequired: true,
-        deliveryMode: "demo",
-        demoOtp: emailOtp,
+      admin.loginOtpEmail = undefined;
+      admin.otpExpire = undefined;
+      await admin.save({ validateBeforeSave: false });
+
+      return res.status(503).json({
+        message: "Admin OTP email could not be sent. Please check email settings and try again.",
+        error: process.env.NODE_ENV === "development" ? mailError.message : undefined,
       });
     }
   } catch (error) {

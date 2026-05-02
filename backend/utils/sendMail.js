@@ -2,6 +2,9 @@ import nodemailer from "nodemailer";
 
 let transporterPromise;
 
+const normalizeEnvValue = (value = "") => String(value).trim();
+const normalizePassword = (value = "") => String(value).replace(/\s+/g, "");
+
 const normalizeRecipient = (value = "") =>
   String(value)
     .split(",")
@@ -10,27 +13,28 @@ const normalizeRecipient = (value = "") =>
     .join(", ");
 
 const createTransporter = async () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  const emailUser = normalizeEnvValue(process.env.EMAIL_USER);
+  const emailPass = normalizePassword(process.env.EMAIL_PASS);
+
+  if (!emailUser || !emailPass) {
     throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS.");
   }
 
   const transporter = nodemailer.createTransport({
+    service: "gmail",
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
+    requireTLS: true,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: emailUser,
+      pass: emailPass,
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000,
-    tls: {
-      servername: "smtp.gmail.com",
-    },
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
   });
 
-  await transporter.verify();
   return transporter;
 };
 
@@ -48,6 +52,7 @@ const getTransporter = async () => {
 export const sendMail = async ({ to, subject, text, html, attachments }) => {
   const transporter = await getTransporter();
   const normalizedTo = normalizeRecipient(to);
+  const emailUser = normalizeEnvValue(process.env.EMAIL_USER);
 
   if (!normalizedTo) {
     throw new Error("Recipient email address is missing.");
@@ -55,7 +60,7 @@ export const sendMail = async ({ to, subject, text, html, attachments }) => {
 
   try {
     await transporter.sendMail({
-      from: `"PARIVA Jewellery" <${process.env.EMAIL_USER}>`,
+      from: `"PARIVA Jewellery" <${emailUser}>`,
       to: normalizedTo,
       subject,
       text,
@@ -64,6 +69,8 @@ export const sendMail = async ({ to, subject, text, html, attachments }) => {
     });
   } catch (error) {
     transporterPromise = undefined;
-    throw error;
+    throw new Error(
+      `Mail send failed: ${error?.response || error?.code || error?.message || "Unknown error"}`
+    );
   }
 };
