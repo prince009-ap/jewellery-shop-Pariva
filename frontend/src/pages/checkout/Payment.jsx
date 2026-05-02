@@ -264,9 +264,60 @@ export default function Payment() {
               </div>
             </div>
 
+            <div className="payment-method-hero">
+              <div>
+                <p className="payment-method-eyebrow">Fast checkout on every screen</p>
+                <h3>Pay with GPay, UPI ID, cards, and more</h3>
+                <p>
+                  Tap the online payment button and Razorpay will open secure options for
+                  Google Pay, UPI apps, direct UPI ID entry, and cards.
+                </p>
+              </div>
+              <div className="payment-method-badges" aria-label="Accepted payment modes">
+                <span>GPay</span>
+                <span>UPI ID</span>
+                <span>PhonePe</span>
+                <span>Cards</span>
+              </div>
+            </div>
+
             {statusMessage ? (
               <div className={`checkout-inline-message ${statusType}`}>{statusMessage}</div>
             ) : null}
+
+            <div className="payment-method-info-grid">
+              <div className="payment-method-info-card">
+                <p className="payment-method-info-card__label">Online Payment</p>
+                <strong>Best for laptop checkout</strong>
+                <p>
+                  Open the secure payment window and choose your preferred app or type your
+                  UPI ID directly there.
+                </p>
+              </div>
+              <div className="payment-method-info-card">
+                <p className="payment-method-info-card__label">Cash on Delivery</p>
+                <strong>Simple offline payment</strong>
+                <p>
+                  Place the order instantly and pay when your jewellery arrives at your
+                  doorstep.
+                </p>
+              </div>
+            </div>
+
+            <div className="payment-method-steps">
+              <div className="payment-method-step">
+                <span>1</span>
+                <p>Click <strong>Pay Online</strong> on your laptop.</p>
+              </div>
+              <div className="payment-method-step">
+                <span>2</span>
+                <p>Select GPay, any UPI app, or enter your UPI ID in the popup.</p>
+              </div>
+              <div className="payment-method-step">
+                <span>3</span>
+                <p>Complete the payment and your order gets confirmed.</p>
+              </div>
+            </div>
 
             <button
               type="button"
@@ -285,6 +336,11 @@ export default function Payment() {
             >
               {onlineLoading ? "Opening Payment..." : "Pay Online (UPI / Card)"}
             </button>
+
+            <p className="payment-method-note">
+              Secure checkout powered by Razorpay. UPI, GPay, cards, and supported wallet
+              options appear in the payment window.
+            </p>
           </aside>
         </div>
       </div>

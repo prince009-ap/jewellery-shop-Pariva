@@ -15,6 +15,23 @@ const generateToken = (id, role = "user") => {
 
 const LOGIN_OTP_MAIL_TIMEOUT_MS = 8000;
 
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const findUserByEmail = async (email) => {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  const directUser = await User.findOne({ email: normalizedEmail });
+  if (directUser) return directUser;
+
+  return User.findOne({
+    email: {
+      $regex: `^\\s*${escapeRegex(normalizedEmail)}\\s*$`,
+      $options: "i",
+    },
+  });
+};
+
 export const register = async (req, res) => {
   try {
     const { name, email, password, mobile, dob, gender } = req.body;
@@ -312,9 +329,7 @@ export const logoutUser = (req, res) => {
 export const loginWithPasswordAndOtp = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const normalizedEmail = email?.trim().toLowerCase();
-
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -488,7 +503,18 @@ export const verifyLoginOtp = async (req, res) => {
       otpExpire: { $gt: Date.now() },
     });
 
-    if (!user) {
+    const matchedUser =
+      user ||
+      (await User.findOne({
+        email: {
+          $regex: `^\\s*${escapeRegex(email.trim().toLowerCase())}\\s*$`,
+          $options: "i",
+        },
+        loginOtp: hashedOtp,
+        otpExpire: { $gt: Date.now() },
+      }));
+
+    if (!matchedUser) {
       return res.status(400).json({ 
         message: "Invalid or expired OTP",
         hint: "Please check your email for the correct OTP or request a new one"
@@ -496,12 +522,12 @@ export const verifyLoginOtp = async (req, res) => {
     }
 
     // Clear OTP fields
-    user.loginOtp = undefined;
-    user.otpExpire = undefined;
-    await user.save({ validateBeforeSave: false });
+    matchedUser.loginOtp = undefined;
+    matchedUser.otpExpire = undefined;
+    await matchedUser.save({ validateBeforeSave: false });
 
     // Generate token
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(matchedUser._id, matchedUser.role);
 
     // Send Login Confirmation Email
     const loginTime = new Date().toLocaleString('en-US', {
@@ -552,7 +578,7 @@ export const verifyLoginOtp = async (req, res) => {
               <!-- Message -->
               <div style="background-color: #333333; border-radius: 12px; padding: 30px; margin: 35px 0; border-left: 4px solid #4caf50;">
                 <p style="margin: 0 0 15px 0; color: #ffffff; font-size: 16px; line-height: 1.6; font-weight: 500;">
-                  Hello ${user.name || 'Valued Customer'},
+                  Hello ${matchedUser.name || 'Valued Customer'},
                 </p>
                 <p style="margin: 0; color: #cccccc; font-size: 16px; line-height: 1.6;">
                   You have successfully logged in to your jewellery account.
@@ -567,7 +593,7 @@ export const verifyLoginOtp = async (req, res) => {
                   <strong style="color: #d4af37;">Date & Time:</strong> ${loginTime}
                 </p>
                 <p style="margin: 8px 0; color: #cccccc; font-size: 15px;">
-                  <strong style="color: #d4af37;">Account:</strong> ${user.email}
+                  <strong style="color: #d4af37;">Account:</strong> ${matchedUser.email}
                 </p>
               </div>
 
@@ -614,10 +640,10 @@ export const verifyLoginOtp = async (req, res) => {
       message: "Login successful",
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
+        id: matchedUser._id,
+        name: matchedUser.name,
+        email: matchedUser.email,
+        role: matchedUser.role
       }
     });
 

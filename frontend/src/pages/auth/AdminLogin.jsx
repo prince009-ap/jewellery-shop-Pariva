@@ -29,7 +29,19 @@ function AdminLogin() {
 
     try {
       setLoading(true);
-      await API.post("/admin/login", { email, password });
+      const normalizedEmail = email.trim().toLowerCase();
+      const res = await API.post("/admin/login", {
+        email: normalizedEmail,
+        password: password.trim(),
+      });
+
+      if (res.data?.token && res.data?.admin) {
+        sessionStorage.setItem("adminToken", res.data.token);
+        setAdmin(res.data.admin);
+        navigate("/admin/dashboard", { replace: true });
+        return;
+      }
+
       setStep(2);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
@@ -46,8 +58,8 @@ function AdminLogin() {
     try {
       setLoading(true);
       const res = await API.post("/admin/verify-otp", {
-        email,
-        emailOtp,
+        email: email.trim().toLowerCase(),
+        emailOtp: emailOtp.trim(),
       });
 
       sessionStorage.setItem("adminToken", res.data.token);

@@ -1,9 +1,14 @@
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import path from "path";
+import { fileURLToPath } from "url";
 import User from "../models/User.js";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const email = process.argv[2] || "prince@test.com";
 const newPassword = process.argv[3] || "Test1234!";

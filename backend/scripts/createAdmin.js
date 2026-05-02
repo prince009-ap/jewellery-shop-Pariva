@@ -1,8 +1,13 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import Admin from "../models/Admin.js";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const createAdmin = async () => {
   try {
@@ -13,17 +18,18 @@ const createAdmin = async () => {
     });
 
     if (adminExists) {
-      console.log("❌ Admin already exists");
+      console.log("Admin already exists");
       process.exit();
     }
 
     const admin = await Admin.create({
       name: "PARIVA Admin",
       email: "senjaliyaprince009@gmail.com",
-      password: "Prince@009", // 🔐 hash automatically hoga
+      password: "Prince@009",
+      mobile: "9999999999",
     });
 
-    console.log("✅ Admin created successfully");
+    console.log("Admin created successfully");
     console.log({
       email: admin.email,
       password: "Prince@009",
