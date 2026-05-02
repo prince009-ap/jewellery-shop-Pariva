@@ -438,24 +438,15 @@ export const loginWithPasswordAndOtp = async (req, res) => {
 
     res.json({ message: "OTP sent to email", otpRequired: true });
   } catch (mailError) {
-    console.error("OTP email failed, falling back to password-only login:", mailError);
+    console.error("OTP email failed:", mailError);
 
     user.loginOtp = undefined;
     user.otpExpire = undefined;
     await user.save({ validateBeforeSave: false });
 
-    const token = generateToken(user._id, user.role);
-
-    res.json({
-      message: "Email verification is temporarily unavailable. Logged in with password only.",
-      otpRequired: false,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    return res.status(503).json({
+      message: "OTP email could not be sent. Please check email settings and try again.",
+      error: process.env.NODE_ENV === "development" ? mailError.message : undefined,
     });
   }
   } catch (error) {

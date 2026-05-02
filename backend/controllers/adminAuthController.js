@@ -97,30 +97,16 @@ export const adminLoginWithOtp = async (req, res) => {
 
       return res.json({ message: "OTP sent to email", otpRequired: true });
     } catch (mailError) {
-      console.error("Admin OTP email failed, falling back to password-only login:", mailError);
+      console.error("Admin OTP email failed:", mailError);
 
       admin.loginOtpEmail = undefined;
       admin.otpExpire = undefined;
       await admin.save({ validateBeforeSave: false });
 
-      const token = buildAdminToken(admin._id);
-
-      return res
-        .cookie("adminToken", token, {
-          httpOnly: true,
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-          secure: process.env.NODE_ENV === "production",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        })
-        .json({
-          message: "Email verification is temporarily unavailable. Logged in with password only.",
-          otpRequired: false,
-          token,
-          admin: {
-            id: admin._id,
-            email: admin.email,
-          },
-        });
+      return res.status(503).json({
+        message: "Admin OTP email could not be sent. Please check email settings and try again.",
+        error: process.env.NODE_ENV === "development" ? mailError.message : undefined,
+      });
     }
   } catch (error) {
     console.error("Admin login error:", error);

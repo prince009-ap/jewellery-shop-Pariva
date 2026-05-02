@@ -1,6 +1,10 @@
 import nodemailer from "nodemailer";
 
 export const sendMail = async ({ to, subject, text ,html,attachments  }) => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS.");
+  }
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {

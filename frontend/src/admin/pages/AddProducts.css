@@ -76,10 +76,84 @@
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
 
+.add-product-status {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.add-product-status.success {
+  background: #edf9f0;
+  border: 1px solid #c7e6cf;
+  color: #17633f;
+}
+
+.add-product-status.error {
+  background: #fff3f3;
+  border: 1px solid #efc5c5;
+  color: #a03434;
+}
+
 .add-product-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.add-product-intro-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.8fr);
+  gap: 18px;
+  align-items: center;
+  padding: 18px 20px;
+  border: 1px solid #eadfca;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.16), transparent 28%),
+    linear-gradient(180deg, #fffefb 0%, #f8f2e6 100%);
+}
+
+.add-product-panel-kicker {
+  margin: 0 0 8px;
+  color: #8b6914;
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.add-product-intro-panel h2 {
+  margin: 0;
+  color: #0d1b2a;
+  font-size: clamp(1.15rem, 2vw, 1.6rem);
+  line-height: 1.2;
+}
+
+.add-product-intro-panel p {
+  margin: 10px 0 0;
+  color: #46576b;
+  line-height: 1.6;
+}
+
+.add-product-panel-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.add-product-panel-points span {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid #d8c59b;
+  background: rgba(255, 255, 255, 0.9);
+  color: #765410;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .field-group {
@@ -356,6 +430,7 @@
     padding: 16px;
   }
 
+  .add-product-intro-panel,
   .add-product-grid {
     grid-template-columns: 1fr;
   }
@@ -376,6 +451,10 @@
   .product-pill-btn {
     width: 100%;
   }
+
+  .add-product-panel-points {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 768px) {
@@ -385,6 +464,11 @@
 
   .add-product-card {
     padding: 20px;
+  }
+
+  .add-product-header,
+  .add-product-intro-panel {
+    border-radius: 18px;
   }
 
   .add-product-card h2 {

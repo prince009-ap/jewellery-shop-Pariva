@@ -32,6 +32,8 @@ function AddProduct() {
 
   const [submitting, setSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusType, setStatusType] = useState("error");
 
   useEffect(() => {
     if (!form.image) {
@@ -46,15 +48,27 @@ function AddProduct() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setStatusMessage("");
     setForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "sku"
+            ? value.toUpperCase()
+            : value,
     }));
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setStatusType("error");
+      setStatusMessage("Please choose a valid image file.");
+      return;
+    }
 
     setForm((prev) => ({
       ...prev,
@@ -65,30 +79,46 @@ function AddProduct() {
   const submitHandler = async (e) => {
     e.preventDefault();
     if (submitting) return;
+    setStatusMessage("");
 
     if (!form.name || !form.price || !form.category || !form.metal || !form.occasion || !form.sku || !form.weight || !form.purity) {
-      alert("Please fill all required product details");
+      setStatusType("error");
+      setStatusMessage("Please fill all required product details.");
       return;
     }
 
     if (!form.image) {
-      alert("Please select a product image");
+      setStatusType("error");
+      setStatusMessage("Please select a product image.");
       return;
     }
 
     const data = new FormData();
-    Object.keys(form).forEach((key) => {
-      data.append(key, form[key]);
-    });
+    data.append("name", form.name.trim());
+    data.append("price", String(form.price).trim());
+    data.append("category", form.category.trim());
+    data.append("image", form.image);
+    data.append("metal", form.metal.trim());
+    data.append("occasion", form.occasion.trim());
+    data.append("stock", String(form.stock).trim());
+    data.append("sku", form.sku.trim().toUpperCase());
+    data.append("weight", String(form.weight).trim());
+    data.append("purity", form.purity.trim());
+    data.append("isFeatured", String(form.isFeatured));
+    data.append("isTrending", String(form.isTrending));
+    data.append("isRecommended", String(form.isRecommended));
 
     try {
       setSubmitting(true);
       const res = await adminAPI.post("/admin/products", data);
       console.log("PRODUCT ADDED:", res.data);
+      setStatusType("success");
+      setStatusMessage("Product added successfully.");
       navigate("/admin/products", { replace: true });
     } catch (err) {
       console.error("ADD PRODUCT ERROR:", err.response?.data || err.message);
-      alert("Product add failed - check console");
+      setStatusType("error");
+      setStatusMessage(err.response?.data?.message || "Product add failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -125,7 +155,27 @@ function AddProduct() {
 
         <section className="add-product-card">
           <form onSubmit={submitHandler}>
+            {statusMessage ? (
+              <div className={`add-product-status ${statusType}`}>{statusMessage}</div>
+            ) : null}
+
             <div className="add-product-grid">
+              <div className="add-product-intro-panel full-span">
+                <div>
+                  <p className="add-product-panel-kicker">Catalog details</p>
+                  <h2>List jewellery cleanly for mobile and laptop shoppers</h2>
+                  <p>
+                    Add the core catalog fields once, upload a strong product image, and keep
+                    SKU, pricing, and stock ready for the storefront.
+                  </p>
+                </div>
+                <div className="add-product-panel-points">
+                  <span>Image required</span>
+                  <span>Unique SKU</span>
+                  <span>Responsive catalog</span>
+                </div>
+              </div>
+
               <div className="field-group">
                 <label>Product Name *</label>
                 <input
